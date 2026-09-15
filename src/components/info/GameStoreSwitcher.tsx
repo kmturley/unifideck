@@ -45,7 +45,7 @@ const HEADER_OFFSET_PX = 40;
 
 /** `InnerContainer`'s own measured left inset on a real device — lines
  *  the overlay up with the rest of the page's content. */
-const OVERLAY_LEFT_PX = 16;
+const OVERLAY_LEFT_PX = 24;
 
 /** Shown in place of an edition name when a sibling has none — the icon
  *  alone doesn't say what makes this copy distinct from the others, and
@@ -92,6 +92,8 @@ export const GameStoreSwitcher: FC<Props> = ({ appId, siblings }) => {
         left: OVERLAY_LEFT_PX,
         zIndex: 5,
         width: "fit-content",
+        background: "rgba(0, 0, 0, 0.5)",
+        padding: 4,
       }}
     >
       <Dropdown
