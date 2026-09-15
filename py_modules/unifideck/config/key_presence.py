@@ -93,8 +93,11 @@ RUNTIME_REQUIRED_KEYS: tuple[str, ...] = (
     # Game Pass entries are never filtered against Steam-native or
     # cross-store duplicates. ``cross_store_enabled`` gates the opt-in
     # "one shortcut per game" collapse (default false).
+    # ``ui_grouping_enabled`` gates the display-only multi-store card
+    # grouping / detail-page store switcher (default true).
     "dedup.tracked_stores",
     "dedup.cross_store_enabled",
+    "dedup.ui_grouping_enabled",
     # diagnostics — self-memory sampling for support bundles.
     # ``tracemalloc`` is opt-in and costly; see services/memory_sampler.py.
     "diagnostics.memory_sample_interval_seconds",

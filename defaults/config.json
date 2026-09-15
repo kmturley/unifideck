@@ -20,7 +20,8 @@
   },
   "dedup": {
     "tracked_stores": ["epic", "gog", "amazon", "ubisoft"],
-    "cross_store_enabled": false
+    "cross_store_enabled": false,
+    "ui_grouping_enabled": true
   },
   "download": {
     "custom_path": ""

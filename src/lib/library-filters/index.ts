@@ -29,6 +29,7 @@ import {
   overviewCompatCategory,
 } from "../steam-bridge/compat-packed";
 import { invalidateGameSize } from "../game-size-cache";
+import { STORE_PRIORITY } from "../game-grouping";
 import type { SteamAppOverview } from "../../types/steam";
 
 export type StoreSlug =
@@ -70,12 +71,156 @@ interface UnifideckCacheEntry {
   isInstalled: boolean;
   steamAppId?: number;
   storeGameId?: string;
+  title?: string;
+  dedupeGroupId?: string;
+  editionLabel?: string;
+  /** Real Steam AppID of a native copy of this title the user already
+   *  owns — NOT the same as `steamAppId` above (that's a metadata-
+   *  spoofing match to the Steam *store catalog*, unrelated to whether
+   *  the user owns it). Set by `core.game_grouping`'s Steam
+   *  cross-reference. */
+  steamOwnedAppId?: number;
+  /** Edition/variant suffix extracted from the Steam-owned copy's OWN
+   *  title (e.g. "The Final Cut"), independent of this entry's own
+   *  `editionLabel` — title-matching tolerates edition differences, so
+   *  the two are not guaranteed to agree. */
+  steamOwnedEditionLabel?: string;
 }
 
 /** Stored in both signed and unsigned forms — Steam returns the
  *  appid signed in some surfaces and unsigned in others, and the
  *  filter functions can't predict which. */
 export const unifideckGameCache: Map<number, UnifideckCacheEntry> = new Map();
+
+/** One cross-store sibling of a duplicate-title group, as surfaced to
+ *  the detail-page store switcher. `store: "steam"` only ever appears
+ *  as the synthetic entry {@link getGroupSiblings} adds for a real
+ *  Steam-owned copy — Unifideck itself never manages a "steam" store. */
+export interface GroupSibling {
+  appId: number;
+  store: StoreSlug;
+  title: string;
+  editionLabel?: string;
+}
+
+/** Reverse index: ``dedupe_group_id`` → every sibling appId in that
+ *  group. Populated alongside ``unifideckGameCache``. Only groups with
+ *  more than one member are stored — a lone game has nothing to switch
+ *  to, so it isn't worth a Map entry. */
+const dedupeGroupSiblings: Map<string, GroupSibling[]> = new Map();
+
+/** Reverse index: real Steam AppID (``steamOwnedAppId``) → a bridging
+ *  Unifideck shortcut appId that matched it. Lets {@link getGroupSiblings}
+ *  answer when queried with the *real* Steam appid — e.g. the user opened
+ *  the native Steam app-details page for a game they also have on Epic —
+ *  which never appears as a key in ``unifideckGameCache`` on its own
+ *  (that cache is keyed by Unifideck shortcut appIds only). Real Steam
+ *  catalog appids are small positive ints, so no signed/unsigned variant
+ *  handling is needed here (unlike shortcut appIds). */
+const steamOwnedReverseAppId: Map<number, number> = new Map();
+
+/** Every other store's copy of the game at ``appId`` — title-matched by
+ *  the backend, cross-store siblings plus (when present) a synthetic
+ *  ``"steam"`` entry for a real Steam-owned copy — or ``[]`` when this
+ *  game has neither and the cache hasn't loaded yet. The detail-page
+ *  store switcher and the "All Games" grid's badge cluster both read
+ *  from this single source so they agree on what "the same game" means.
+ *  Unlike cross-store siblings (only meaningful in groups of 2+), the
+ *  Steam entry is added even for an otherwise-ungrouped (singleton)
+ *  title, since "also owned on Steam" doesn't require a second
+ *  Unifideck-managed copy to be worth surfacing. */
+export function getGroupSiblings(appId: number): GroupSibling[] {
+  const entry = unifideckGameCache.get(appId);
+  if (!entry) {
+    // Not a Unifideck shortcut appId — might be the real Steam appid of a
+    // game we also have on another store. Bridge to the Unifideck side and
+    // let that lookup build the full sibling list (it'll include a "steam"
+    // entry for this exact appId).
+    const bridgeAppId = steamOwnedReverseAppId.get(appId);
+    return bridgeAppId != null ? getGroupSiblings(bridgeAppId) : [];
+  }
+
+  const crossStoreSiblings = entry.dedupeGroupId
+    ? dedupeGroupSiblings.get(entry.dedupeGroupId) ?? []
+    : [];
+
+  // The Steam cross-reference is matched per-game (title_match isn't
+  // guaranteed perfectly transitive), so a sibling other than the
+  // queried appId may be the one carrying steamOwnedAppId. Any member
+  // finding it means the whole group counts as Steam-owned — and its
+  // steamOwnedEditionLabel travels with it, from that SAME entry (not
+  // any other member's), since it describes the Steam title specifically.
+  const steamOwnedSource: UnifideckCacheEntry | undefined =
+    entry.steamOwnedAppId != null
+      ? entry
+      : crossStoreSiblings
+          .map((s) => unifideckGameCache.get(s.appId))
+          .find((e): e is UnifideckCacheEntry => e?.steamOwnedAppId != null);
+
+  const steamOwnedAppId = steamOwnedSource?.steamOwnedAppId;
+  if (!steamOwnedAppId) return crossStoreSiblings;
+
+  const steamEntry: GroupSibling = {
+    appId: steamOwnedAppId,
+    store: "steam",
+    title: entry.title ?? "",
+    editionLabel: steamOwnedSource?.steamOwnedEditionLabel,
+  };
+  // No cross-store group of its own, but a real Steam copy exists —
+  // still worth a 2-entry switcher (this Unifideck copy + Steam).
+  if (crossStoreSiblings.length === 0) {
+    return [
+      {
+        appId,
+        store: entry.store,
+        title: entry.title ?? "",
+        editionLabel: entry.editionLabel,
+      },
+      steamEntry,
+    ];
+  }
+  return [...crossStoreSiblings, steamEntry];
+}
+
+/** Every appId the native "All Games" tab hides because a better tile
+ *  already represents the same title. Two reasons feed this set:
+ *
+ *  1. Not the chosen "primary" of a cross-store duplicate group — the
+ *     surviving tile is whichever store's shortcut
+ *     {@link pickGroupPrimary} chose.
+ *  2. The game is also owned on real native Steam
+ *     (`steamOwnedAppId` set) — the native Steam tile already shows
+ *     through the "all" filter unconditionally, so every Unifideck
+ *     copy is redundant, primary or not.
+ *
+ *  Populated alongside ``unifideckGameCache``. Steam's native tile
+ *  renderer (unlike our own `GameGrid`) can't show a multi-store badge
+ *  cluster, so this is a plain hide rather than a merge — the
+ *  detail-page store switcher (`GameStoreSwitcher`) is how the other
+ *  stores (Steam included) stay reachable. */
+const nonPrimaryDuplicateAppIds: Set<number> = new Set();
+
+/** True if ``appId`` should be hidden from the "All Games" tab because
+ *  a better tile already represents the same title — see
+ *  {@link nonPrimaryDuplicateAppIds} for the two reasons. False for
+ *  ungrouped, not-Steam-owned games and for a duplicate group's primary. */
+export function isHiddenDuplicate(appId: number): boolean {
+  return nonPrimaryDuplicateAppIds.has(appId);
+}
+
+/** Same precedence `game-grouping.ts`'s `pickPrimary` uses for the (today
+ *  unmounted) `GameGrid` component — installed copy first, else first
+ *  store in `STORE_PRIORITY` — kept in sync so both surfaces agree on
+ *  which store "wins" a duplicate group if `GameGrid` is ever wired up. */
+function pickGroupPrimary(candidates: UnifideckGameInput[]): UnifideckGameInput {
+  const installed = candidates.find((c) => c.isInstalled);
+  if (installed) return installed;
+  for (const store of STORE_PRIORITY) {
+    const match = candidates.find((c) => c.store === store);
+    if (match) return match;
+  }
+  return candidates[0];
+}
 
 /** Reverse index: ``"<store>:<store_game_id>"`` → shortcut appId.
  *  Lets callers that only hold a store/game-id pair (e.g. the
@@ -115,27 +260,94 @@ function variantIds(appId: number): number[] {
   return [...ids];
 }
 
+/** True if ``a`` and ``b`` are the same shortcut appId, allowing for
+ *  Steam reporting it signed on one surface and unsigned on another
+ *  (see {@link variantIds}). The detail-page store switcher's "which
+ *  copy am I looking at" check needs this — comparing the raw values
+ *  directly silently never matches when the currently-rendered
+ *  overview's appid and the cached sibling's appid come from different
+ *  surfaces. */
+export function appIdsMatch(a: number, b: number): boolean {
+  if (a === b) return true;
+  return variantIds(a).includes(b) || variantIds(b).includes(a);
+}
+
 export interface UnifideckGameInput {
   appId: number;
   store: Exclude<StoreSlug, "steam">;
   isInstalled: boolean;
   steamAppId?: number;
   storeGameId?: string;
+  title?: string;
+  dedupeGroupId?: string;
+  editionLabel?: string;
+  steamOwnedAppId?: number;
+  steamOwnedEditionLabel?: string;
 }
 
 export function updateUnifideckCache(games: UnifideckGameInput[]): void {
   unifideckGameCache.clear();
   unifideckAppIdByStoreGame.clear();
+  dedupeGroupSiblings.clear();
+  nonPrimaryDuplicateAppIds.clear();
+  steamOwnedReverseAppId.clear();
+  const groupBuilders: Map<string, GroupSibling[]> = new Map();
+  const groupMembers: Map<string, UnifideckGameInput[]> = new Map();
   for (const g of games) {
     const entry: UnifideckCacheEntry = {
       store: g.store,
       isInstalled: g.isInstalled,
       steamAppId: g.steamAppId,
       storeGameId: g.storeGameId,
+      title: g.title,
+      dedupeGroupId: g.dedupeGroupId,
+      editionLabel: g.editionLabel,
+      steamOwnedAppId: g.steamOwnedAppId,
+      steamOwnedEditionLabel: g.steamOwnedEditionLabel,
     };
+    if (g.steamOwnedAppId) {
+      for (const id of variantIds(g.appId)) nonPrimaryDuplicateAppIds.add(id);
+      steamOwnedReverseAppId.set(g.steamOwnedAppId, g.appId);
+    }
     for (const id of variantIds(g.appId)) unifideckGameCache.set(id, entry);
     if (g.storeGameId) {
       unifideckAppIdByStoreGame.set(`${g.store}:${g.storeGameId}`, g.appId);
+    }
+    if (g.dedupeGroupId) {
+      const siblings = groupBuilders.get(g.dedupeGroupId) ?? [];
+      siblings.push({
+        appId: g.appId,
+        store: g.store,
+        title: g.title ?? "",
+        editionLabel: g.editionLabel,
+      });
+      groupBuilders.set(g.dedupeGroupId, siblings);
+
+      const members = groupMembers.get(g.dedupeGroupId) ?? [];
+      members.push(g);
+      groupMembers.set(g.dedupeGroupId, members);
+    }
+  }
+  for (const [groupId, siblings] of groupBuilders) {
+    if (siblings.length > 1) dedupeGroupSiblings.set(groupId, siblings);
+  }
+  for (const members of groupMembers.values()) {
+    if (members.length < 2) continue;
+    // Steam cross-reference is matched per-game and isn't guaranteed to
+    // land on every title-matched sibling identically (see
+    // getGroupSiblings) — if ANY member found a Steam-owned match, the
+    // whole group is redundant with the native Steam tile, so every
+    // member is hidden rather than just the non-primary ones.
+    if (members.some((m) => m.steamOwnedAppId)) {
+      for (const member of members) {
+        for (const id of variantIds(member.appId)) nonPrimaryDuplicateAppIds.add(id);
+      }
+      continue;
+    }
+    const primary = pickGroupPrimary(members);
+    for (const member of members) {
+      if (member.appId === primary.appId) continue;
+      for (const id of variantIds(member.appId)) nonPrimaryDuplicateAppIds.add(id);
     }
   }
 }
@@ -147,6 +359,12 @@ export function updateSingleGameStatus(g: UnifideckGameInput): void {
     isInstalled: g.isInstalled,
     steamAppId: existing?.steamAppId ?? g.steamAppId,
     storeGameId: g.storeGameId ?? existing?.storeGameId,
+    title: existing?.title ?? g.title,
+    dedupeGroupId: existing?.dedupeGroupId ?? g.dedupeGroupId,
+    editionLabel: existing?.editionLabel ?? g.editionLabel,
+    steamOwnedAppId: existing?.steamOwnedAppId ?? g.steamOwnedAppId,
+    steamOwnedEditionLabel:
+      existing?.steamOwnedEditionLabel ?? g.steamOwnedEditionLabel,
   };
   for (const id of variantIds(g.appId)) unifideckGameCache.set(id, entry);
   if (
@@ -223,7 +441,12 @@ type FilterFn<K extends FilterType> = (
 const filterFunctions: { [K in FilterType]: FilterFn<K> } = {
   all: (_p, app) => {
     if (app.app_type !== NON_STEAM_APP_TYPE) return true;
-    return isUnifideckGame(app.appid);
+    if (!isUnifideckGame(app.appid)) return false;
+    // Cross-store duplicates: only the chosen primary's tile shows here —
+    // see nonPrimaryDuplicateAppIds. Steam's native tile can't render a
+    // multi-store badge cluster, so this is a hide, not a merge; the
+    // detail-page store switcher covers switching to the hidden stores.
+    return !isHiddenDuplicate(app.appid);
   },
   installed: (params, app) => {
     const isInstalled = getInstalledStatus(
@@ -339,8 +562,13 @@ interface RpcGameRow {
   app_id?: number | null;
   store?: StoreSlug;
   store_game_id?: string;
+  title?: string;
   installed?: boolean;
   metadata?: Record<string, unknown>;
+  dedupe_group_id?: string | null;
+  edition_label?: string | null;
+  steam_owned_app_id?: number | null;
+  steam_owned_edition_label?: string | null;
 }
 
 type StoreCounts = Partial<Record<Exclude<StoreSlug, "steam">, number>>;
@@ -417,6 +645,11 @@ export async function loadUnifideckCache(): Promise<void> {
         isInstalled: Boolean(g.installed),
         steamAppId,
         storeGameId: g.store_game_id,
+        title: g.title,
+        dedupeGroupId: g.dedupe_group_id ?? undefined,
+        editionLabel: g.edition_label ?? undefined,
+        steamOwnedAppId: g.steam_owned_app_id ?? undefined,
+        steamOwnedEditionLabel: g.steam_owned_edition_label ?? undefined,
       });
       counts[g.store] += 1;
     }

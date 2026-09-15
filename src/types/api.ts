@@ -98,6 +98,24 @@ export interface Game {
   ownership_type?: OwnershipType;
   store_tags?: GameTag[];
   size_bytes?: number;
+  /** Shared key for every cross-store copy of this title (see backend
+   *  ``core.game_grouping``), absent/null when this is the only copy.
+   *  Display-only — grouping never changes which shortcuts exist. */
+  dedupe_group_id?: string | null;
+  /** Recognised edition/variant suffix stripped out of ``title`` for
+   *  matching (e.g. ``"Ultimate Edition"``), null when none. */
+  edition_label?: string | null;
+  /** Real Steam AppID of a native copy of this title the user already
+   *  owns, when the backend found a title match against the Steam
+   *  library. Null when no such match exists. Independent of
+   *  `dedupe_group_id` — a singleton title can still have this set. */
+  steam_owned_app_id?: number | null;
+  /** Edition/variant suffix extracted from the Steam-owned copy's own
+   *  title (e.g. "The Final Cut"), null when `steam_owned_app_id` is
+   *  unset or that title carries no recognised suffix. NOT guaranteed
+   *  to match this game's own `edition_label` — title-matching tolerates
+   *  edition differences on purpose. */
+  steam_owned_edition_label?: string | null;
 }
 
 /** One achievement (definition + this user's unlock status). */

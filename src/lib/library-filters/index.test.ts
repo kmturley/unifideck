@@ -31,6 +31,11 @@ import {
   validThirdPartyCache,
   loadUnifideckCache,
   isUnifideckCacheLoaded,
+  updateUnifideckCache,
+  isHiddenDuplicate,
+  getGroupSiblings,
+  appIdsMatch,
+  type UnifideckGameInput,
 } from "./index";
 import type { SteamAppOverview } from "../../types/steam";
 
@@ -111,6 +116,255 @@ describe("library-filters/index.ts installed filter", () => {
 
     const result = runFilter({ type: "installed", params: { installed: true } }, app);
     expect(result).toBe(false);
+  });
+});
+
+describe('"all" filter hides non-primary cross-store duplicates', () => {
+  beforeEach(() => {
+    unifideckGameCache.clear();
+    validThirdPartyCache.clear();
+  });
+
+  function appFor(appId: number): SteamAppOverview {
+    return {
+      appid: appId,
+      app_type: NON_STEAM_APP_TYPE,
+      installed: false,
+      display_name: "whatever",
+    } as unknown as SteamAppOverview;
+  }
+
+  it("shows only the primary tile for a duplicate group, hides the rest", () => {
+    const games: UnifideckGameInput[] = [
+      {
+        appId: 1,
+        store: "epic",
+        isInstalled: false,
+        title: "Doors - Paradox",
+        dedupeGroupId: "doors paradox",
+      },
+      {
+        appId: 2,
+        store: "amazon",
+        isInstalled: false,
+        title: "Doors: Paradox",
+        dedupeGroupId: "doors paradox",
+      },
+    ];
+    updateUnifideckCache(games);
+
+    const visible = games.filter((g) =>
+      runFilter({ type: "all", params: {} }, appFor(g.appId)),
+    );
+    expect(visible).toHaveLength(1);
+    // Fixed store priority (no installed copy): epic beats amazon.
+    expect(visible[0].appId).toBe(1);
+    expect(isHiddenDuplicate(2)).toBe(true);
+    expect(isHiddenDuplicate(1)).toBe(false);
+  });
+
+  it("prefers an installed copy as the surviving tile over store priority", () => {
+    const games: UnifideckGameInput[] = [
+      { appId: 1, store: "epic", isInstalled: false, dedupeGroupId: "g" },
+      { appId: 2, store: "amazon", isInstalled: true, dedupeGroupId: "g" },
+    ];
+    updateUnifideckCache(games);
+
+    expect(isHiddenDuplicate(2)).toBe(false);
+    expect(isHiddenDuplicate(1)).toBe(true);
+  });
+
+  it("leaves ungrouped games untouched", () => {
+    const games: UnifideckGameInput[] = [
+      { appId: 1, store: "epic", isInstalled: false },
+      { appId: 2, store: "gog", isInstalled: false },
+    ];
+    updateUnifideckCache(games);
+
+    const visible = games.filter((g) =>
+      runFilter({ type: "all", params: {} }, appFor(g.appId)),
+    );
+    expect(visible).toHaveLength(2);
+  });
+
+  it("still exposes every sibling via getGroupSiblings for the detail-page switcher", () => {
+    const games: UnifideckGameInput[] = [
+      { appId: 1, store: "epic", isInstalled: false, dedupeGroupId: "g" },
+      { appId: 2, store: "amazon", isInstalled: true, dedupeGroupId: "g" },
+    ];
+    updateUnifideckCache(games);
+
+    expect(getGroupSiblings(1).map((s) => s.appId).sort()).toEqual([1, 2]);
+    expect(getGroupSiblings(2).map((s) => s.appId).sort()).toEqual([1, 2]);
+  });
+});
+
+describe("Steam-owned cross-reference", () => {
+  beforeEach(() => {
+    unifideckGameCache.clear();
+    validThirdPartyCache.clear();
+  });
+
+  function appFor(appId: number): SteamAppOverview {
+    return {
+      appid: appId,
+      app_type: NON_STEAM_APP_TYPE,
+      installed: false,
+      display_name: "whatever",
+    } as unknown as SteamAppOverview;
+  }
+
+  it("hides a singleton Unifideck game already owned on real Steam", () => {
+    const games: UnifideckGameInput[] = [
+      { appId: 1, store: "epic", isInstalled: false, steamOwnedAppId: 632470 },
+    ];
+    updateUnifideckCache(games);
+
+    expect(isHiddenDuplicate(1)).toBe(true);
+    expect(runFilter({ type: "all", params: {} }, appFor(1))).toBe(false);
+  });
+
+  it("hides every cross-store copy when any of them is also Steam-owned", () => {
+    const games: UnifideckGameInput[] = [
+      { appId: 1, store: "epic", isInstalled: false, dedupeGroupId: "g" },
+      {
+        appId: 2,
+        store: "amazon",
+        isInstalled: true,
+        dedupeGroupId: "g",
+        steamOwnedAppId: 632470,
+      },
+    ];
+    updateUnifideckCache(games);
+
+    expect(isHiddenDuplicate(1)).toBe(true);
+    expect(isHiddenDuplicate(2)).toBe(true);
+  });
+
+  it("leaves a non-Steam-owned game visible", () => {
+    const games: UnifideckGameInput[] = [
+      { appId: 1, store: "epic", isInstalled: false },
+    ];
+    updateUnifideckCache(games);
+
+    expect(isHiddenDuplicate(1)).toBe(false);
+    expect(runFilter({ type: "all", params: {} }, appFor(1))).toBe(true);
+  });
+
+  it("adds a synthetic steam sibling for an otherwise-ungrouped title", () => {
+    const games: UnifideckGameInput[] = [
+      {
+        appId: 1,
+        store: "epic",
+        isInstalled: false,
+        title: "Disco Elysium",
+        steamOwnedAppId: 632470,
+      },
+    ];
+    updateUnifideckCache(games);
+
+    const siblings = getGroupSiblings(1);
+    expect(siblings).toHaveLength(2);
+    expect(siblings.map((s) => s.store).sort()).toEqual(["epic", "steam"]);
+    expect(siblings.find((s) => s.store === "steam")?.appId).toBe(632470);
+  });
+
+  it("carries the Steam copy's own edition label onto the synthetic sibling", () => {
+    const games: UnifideckGameInput[] = [
+      {
+        appId: 1,
+        store: "epic",
+        isInstalled: false,
+        title: "Disco Elysium",
+        steamOwnedAppId: 632470,
+        steamOwnedEditionLabel: "The Final Cut",
+      },
+    ];
+    updateUnifideckCache(games);
+
+    const steamSibling = getGroupSiblings(1).find((s) => s.store === "steam");
+    expect(steamSibling?.editionLabel).toBe("The Final Cut");
+  });
+
+  it("appends the steam sibling onto an existing cross-store group", () => {
+    const games: UnifideckGameInput[] = [
+      { appId: 1, store: "epic", isInstalled: false, dedupeGroupId: "g" },
+      {
+        appId: 2,
+        store: "amazon",
+        isInstalled: false,
+        dedupeGroupId: "g",
+        steamOwnedAppId: 632470,
+        steamOwnedEditionLabel: "The Final Cut",
+      },
+    ];
+    updateUnifideckCache(games);
+
+    const siblings = getGroupSiblings(1);
+    expect(siblings.map((s) => s.store).sort()).toEqual(["amazon", "epic", "steam"]);
+    // The label came from the entry that actually carried steamOwnedAppId
+    // (appId 2), even though we queried from a different member (appId 1).
+    expect(siblings.find((s) => s.store === "steam")?.editionLabel).toBe(
+      "The Final Cut",
+    );
+  });
+
+  it("resolves siblings when queried by the real Steam appid (native Steam page)", () => {
+    const games: UnifideckGameInput[] = [
+      {
+        appId: 1,
+        store: "epic",
+        isInstalled: false,
+        title: "Disco Elysium",
+        steamOwnedAppId: 632470,
+      },
+    ];
+    updateUnifideckCache(games);
+
+    // The native Disco Elysium app-details page is opened by its own real
+    // Steam appid (632470), which is never a key in unifideckGameCache —
+    // only Unifideck shortcut appIds are. getGroupSiblings must still find
+    // the Epic copy via the reverse index.
+    const siblings = getGroupSiblings(632470);
+    expect(siblings.map((s) => s.store).sort()).toEqual(["epic", "steam"]);
+  });
+
+  it("resolves siblings by real Steam appid for a multi-store group too", () => {
+    const games: UnifideckGameInput[] = [
+      { appId: 1, store: "epic", isInstalled: false, dedupeGroupId: "g" },
+      {
+        appId: 2,
+        store: "amazon",
+        isInstalled: false,
+        dedupeGroupId: "g",
+        steamOwnedAppId: 632470,
+      },
+    ];
+    updateUnifideckCache(games);
+
+    const siblings = getGroupSiblings(632470);
+    expect(siblings.map((s) => s.store).sort()).toEqual(["amazon", "epic", "steam"]);
+  });
+
+  it("returns [] for an unrelated real Steam appid with no Unifideck match", () => {
+    expect(getGroupSiblings(999999)).toEqual([]);
+  });
+});
+
+describe("appIdsMatch", () => {
+  it("matches identical values", () => {
+    expect(appIdsMatch(12345, 12345)).toBe(true);
+  });
+
+  it("matches an unsigned shortcut appid against its signed (negative) variant", () => {
+    const unsigned = 3894638122; // > 0x7fffffff
+    const signed = unsigned - 0x100000000; // negative int32 form
+    expect(appIdsMatch(unsigned, signed)).toBe(true);
+    expect(appIdsMatch(signed, unsigned)).toBe(true);
+  });
+
+  it("does not match unrelated appids", () => {
+    expect(appIdsMatch(1, 2)).toBe(false);
   });
 });
 

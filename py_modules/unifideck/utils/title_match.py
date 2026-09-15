@@ -272,6 +272,39 @@ _STRIP_STRATEGIES = (
 )
 
 
+def extract_edition_label(title: str) -> str | None:
+    """Human-readable edition/variant suffix, case preserved.
+
+    Companion to :func:`strip_edition_suffix`, which answers "what's the
+    base title" by discarding the suffix entirely. This answers the
+    opposite question — "what did we discard" — for display purposes (a
+    duplicate-game card showing *which* store carries the Deluxe Edition).
+
+    Finds the split point by running the same normalisation +
+    known-suffix / bare-``edition`` checks used for matching, then slices
+    the *original* (non-normalised) title at the equivalent word
+    boundary so casing and punctuation reach the UI untouched
+    (``"Cyberpunk 2077: Ultimate Edition"`` → ``"Ultimate Edition"``, not
+    ``"ultimate edition"``).
+
+    Returns ``None`` when the title carries no recognised edition suffix
+    — most titles, including every sequel ("Beholder 2") since a bare
+    version number is never in ``EDITION_SUFFIXES`` and doesn't match the
+    generic ``<words> edition`` pattern either.
+    """
+    normalized = normalize_for_match(title)
+    if not normalized:
+        return None
+    base = strip_edition_suffix(normalized)
+    if base == normalized:
+        return None
+    words = title.split()
+    base_word_count = len(base.split())
+    if base_word_count >= len(words):
+        return None
+    return " ".join(words[base_word_count:]).strip(" :-–—")
+
+
 def score_match(query_norm: str, candidate_norm: str) -> float:
     """Jaccard word-set overlap with prefix-match bonus.
 

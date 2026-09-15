@@ -113,20 +113,32 @@ class SyncRPCMixin(CleanupRPCMixin):
         """
         return self.sync_service.get_all_games()
 
-    async def update_steam_owned_titles(self, titles: list[str]) -> Any:
-        """Persist the full owned-Steam-library titles from the frontend.
+    async def update_steam_owned_titles(self, games: list[dict[str, Any]]) -> Any:
+        """Persist the full owned-Steam-library {title, appid} from the frontend.
 
-        ``appmanifest`` only sees *installed* Steam games, so the
-        Ubisoft Steam-linked filter can't hide games the user owns on
-        Steam but hasn't installed. The frontend enumerates the full
-        owned library (``collectionStore``) and pushes the display names
-        here; :mod:`unifideck.stores.ubisoft.library.steam_filter` unions
-        them in. Returns ``{"count": <stored>}``.
+        ``appmanifest`` only sees *installed* Steam games, so neither the
+        Ubisoft Steam-linked filter nor the cross-store duplicate-grouping
+        Steam cross-reference (``core.game_grouping``) can see a title
+        the user owns but hasn't installed. The frontend enumerates the
+        full owned library (``collectionStore``) and pushes
+        ``{title, appid}`` pairs here.
+
+        Writes both caches: the title-only one
+        (:mod:`unifideck.stores.ubisoft.library.steam_filter`'s existing
+        consumer, unchanged) and the title+appid one
+        (:mod:`unifideck.core.game_grouping`'s new consumer, which needs
+        the real appid to point the detail-page store switcher at).
+        Returns ``{"count": <stored>}``.
         """
-        from unifideck.steam.owned_games import save_frontend_owned_titles
+        from unifideck.steam.owned_games import (
+            save_frontend_owned_games,
+            save_frontend_owned_titles,
+        )
 
-        safe = [t for t in (titles or []) if isinstance(t, str)]
-        return {"count": save_frontend_owned_titles(safe)}
+        safe = [g for g in (games or []) if isinstance(g, dict)]
+        titles = [g["title"] for g in safe if isinstance(g.get("title"), str)]
+        save_frontend_owned_titles(titles)
+        return {"count": save_frontend_owned_games(safe)}
 
     async def set_active_steam_user(self, account_id: str) -> Any:
         """Persist the live logged-in Steam account id the frontend read.
