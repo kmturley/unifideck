@@ -26,7 +26,7 @@ _APPID_PATTERN = re.compile(r'"appid"\s+"(\d+)"')
 _LIBFOLDER_PATH_PATTERN = re.compile(r'"path"\s+"([^"]*)"')
 _Fingerprint = tuple[str, float | None, tuple[tuple[str, float | None], ...]]
 _cache: tuple[_Fingerprint, frozenset[str]] | None = None
-_appid_cache: tuple[_Fingerprint, dict[str, "OwnedApp"]] | None = None
+_appid_cache: tuple[_Fingerprint, dict[str, OwnedApp]] | None = None
 # Owned-but-not-installed titles can't be read from appmanifests, so the
 # frontend (which can enumerate the full Steam library via collectionStore)
 # pushes them here for the backend filter to read.

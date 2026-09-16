@@ -46,7 +46,11 @@ export const GameGrid: FC<Props> = ({
     () =>
       groupingEnabled
         ? groupGames(games)
-        : games.map((game) => ({ key: gameKey(game), games: [game], primary: game })),
+        : games.map((game) => ({
+            key: gameKey(game),
+            games: [game],
+            primary: game,
+          })),
     [games, groupingEnabled],
   );
 
@@ -122,7 +126,9 @@ export const GameGrid: FC<Props> = ({
                 />
               ))}
               {overflowCount > 0 && (
-                <span style={{ fontSize: 10, color: "#e5e7eb", lineHeight: "12px" }}>
+                <span
+                  style={{ fontSize: 10, color: "#e5e7eb", lineHeight: "12px" }}
+                >
                   +{overflowCount}
                 </span>
               )}

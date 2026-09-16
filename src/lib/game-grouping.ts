@@ -79,6 +79,10 @@ export function groupGames(games: Game[]): GameGroup[] {
   }
   return order.map((key) => {
     const groupGamesForKey = byKey.get(key)!;
-    return { key, games: groupGamesForKey, primary: pickPrimary(groupGamesForKey) };
+    return {
+      key,
+      games: groupGamesForKey,
+      primary: pickPrimary(groupGamesForKey),
+    };
   });
 }

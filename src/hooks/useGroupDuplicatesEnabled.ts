@@ -22,7 +22,9 @@ export interface UseGroupDuplicatesEnabledResult {
 }
 
 export function useGroupDuplicatesEnabled(): UseGroupDuplicatesEnabledResult {
-  const [enabled, setEnabledState] = useState<boolean>(isGroupDuplicatesEnabled);
+  const [enabled, setEnabledState] = useState<boolean>(
+    isGroupDuplicatesEnabled,
+  );
 
   useEffect(() => {
     const handler = (e: Event) => {

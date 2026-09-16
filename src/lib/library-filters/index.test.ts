@@ -54,10 +54,7 @@ import {
   appIdsMatch,
   type UnifideckGameInput,
 } from "./index";
-import {
-  isGroupDuplicatesEnabled,
-  setGroupDuplicatesEnabled,
-} from "../group-duplicates-setting";
+import { isGroupDuplicatesEnabled, setGroupDuplicatesEnabled } from "../group-duplicates-setting";
 import type { SteamAppOverview } from "../../types/steam";
 
 const NON_STEAM_APP_TYPE = 1073741824;
@@ -180,9 +177,7 @@ describe('"all" filter hides non-primary cross-store duplicates', () => {
     ];
     updateUnifideckCache(games);
 
-    const visible = games.filter((g) =>
-      runFilter({ type: "all", params: {} }, appFor(g.appId)),
-    );
+    const visible = games.filter((g) => runFilter({ type: "all", params: {} }, appFor(g.appId)));
     expect(visible).toHaveLength(1);
     // Fixed store priority (no installed copy): epic beats amazon.
     expect(visible[0].appId).toBe(1);
@@ -208,9 +203,7 @@ describe('"all" filter hides non-primary cross-store duplicates', () => {
     ];
     updateUnifideckCache(games);
 
-    const visible = games.filter((g) =>
-      runFilter({ type: "all", params: {} }, appFor(g.appId)),
-    );
+    const visible = games.filter((g) => runFilter({ type: "all", params: {} }, appFor(g.appId)));
     expect(visible).toHaveLength(2);
   });
 
@@ -221,8 +214,16 @@ describe('"all" filter hides non-primary cross-store duplicates', () => {
     ];
     updateUnifideckCache(games);
 
-    expect(getGroupSiblings(1).map((s) => s.appId).sort()).toEqual([1, 2]);
-    expect(getGroupSiblings(2).map((s) => s.appId).sort()).toEqual([1, 2]);
+    expect(
+      getGroupSiblings(1)
+        .map((s) => s.appId)
+        .sort(),
+    ).toEqual([1, 2]);
+    expect(
+      getGroupSiblings(2)
+        .map((s) => s.appId)
+        .sort(),
+    ).toEqual([1, 2]);
   });
 });
 
@@ -270,9 +271,7 @@ describe("Steam-owned cross-reference", () => {
   });
 
   it("leaves a non-Steam-owned game visible", () => {
-    const games: UnifideckGameInput[] = [
-      { appId: 1, store: "epic", isInstalled: false },
-    ];
+    const games: UnifideckGameInput[] = [{ appId: 1, store: "epic", isInstalled: false }];
     updateUnifideckCache(games);
 
     expect(isHiddenDuplicate(1)).toBe(false);
@@ -332,9 +331,7 @@ describe("Steam-owned cross-reference", () => {
     expect(siblings.map((s) => s.store).sort()).toEqual(["amazon", "epic", "steam"]);
     // The label came from the entry that actually carried steamOwnedAppId
     // (appId 2), even though we queried from a different member (appId 1).
-    expect(siblings.find((s) => s.store === "steam")?.editionLabel).toBe(
-      "The Final Cut",
-    );
+    expect(siblings.find((s) => s.store === "steam")?.editionLabel).toBe("The Final Cut");
   });
 
   it("resolves siblings when queried by the real Steam appid (native Steam page)", () => {
@@ -447,10 +444,7 @@ describe('"Group duplicates" setting', () => {
     updateUnifideckCache(duplicateGames);
 
     const visible = duplicateGames.filter((g) =>
-      runFilter(
-        { type: "installed", params: { installed: true } },
-        appFor(g.appId),
-      ),
+      runFilter({ type: "installed", params: { installed: true } }, appFor(g.appId)),
     );
     expect(visible).toHaveLength(2);
   });
@@ -460,10 +454,7 @@ describe('"Group duplicates" setting', () => {
     updateUnifideckCache(duplicateGames);
 
     const visible = duplicateGames.filter((g) =>
-      runFilter(
-        { type: "installed", params: { installed: true } },
-        appFor(g.appId),
-      ),
+      runFilter({ type: "installed", params: { installed: true } }, appFor(g.appId)),
     );
     expect(visible).toHaveLength(1);
   });

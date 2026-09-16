@@ -228,7 +228,9 @@ function hideAsDuplicate(appId: number): boolean {
  *  unmounted) `GameGrid` component — installed copy first, else first
  *  store in `STORE_PRIORITY` — kept in sync so both surfaces agree on
  *  which store "wins" a duplicate group if `GameGrid` is ever wired up. */
-function pickGroupPrimary(candidates: UnifideckGameInput[]): UnifideckGameInput {
+function pickGroupPrimary(
+  candidates: UnifideckGameInput[],
+): UnifideckGameInput {
   const installed = candidates.find((c) => c.isInstalled);
   if (installed) return installed;
   for (const store of STORE_PRIORITY) {
@@ -356,14 +358,16 @@ export function updateUnifideckCache(games: UnifideckGameInput[]): void {
     // member is hidden rather than just the non-primary ones.
     if (members.some((m) => m.steamOwnedAppId)) {
       for (const member of members) {
-        for (const id of variantIds(member.appId)) nonPrimaryDuplicateAppIds.add(id);
+        for (const id of variantIds(member.appId))
+          nonPrimaryDuplicateAppIds.add(id);
       }
       continue;
     }
     const primary = pickGroupPrimary(members);
     for (const member of members) {
       if (member.appId === primary.appId) continue;
-      for (const id of variantIds(member.appId)) nonPrimaryDuplicateAppIds.add(id);
+      for (const id of variantIds(member.appId))
+        nonPrimaryDuplicateAppIds.add(id);
     }
   }
 }

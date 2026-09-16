@@ -64,6 +64,66 @@ def _bucket_keys(title: str) -> set[str]:
     return keys
 
 
+class _UnionFind:
+    """Union-find over game indices — split out of
+    :func:`annotate_duplicate_groups` purely to keep that function's
+    cyclomatic/cognitive complexity within the repo's lint threshold.
+    """
+
+    def __init__(self, size: int) -> None:
+        self._parent = list(range(size))
+
+    def find(self, i: int) -> int:
+        while self._parent[i] != i:
+            self._parent[i] = self._parent[self._parent[i]]
+            i = self._parent[i]
+        return i
+
+    def union(self, a: int, b: int) -> None:
+        ra, rb = self.find(a), self.find(b)
+        if ra != rb:
+            self._parent[rb] = ra
+
+
+def _bucket_by_title(games: Sequence[Game]) -> dict[str, list[int]]:
+    buckets: dict[str, list[int]] = {}
+    for index, game in enumerate(games):
+        for key in _bucket_keys(game.title):
+            buckets.setdefault(key, []).append(index)
+    return buckets
+
+
+def _union_matching_titles(
+    games: Sequence[Game],
+    buckets: dict[str, list[int]],
+) -> _UnionFind:
+    uf = _UnionFind(len(games))
+    for indices in buckets.values():
+        for pos, i in enumerate(indices):
+            for j in indices[pos + 1 :]:
+                if titles_match(games[i].title, games[j].title):
+                    uf.union(i, j)
+    return uf
+
+
+def _group_members(games: Sequence[Game], uf: _UnionFind) -> dict[int, list[int]]:
+    members: dict[int, list[int]] = {}
+    for i in range(len(games)):
+        members.setdefault(uf.find(i), []).append(i)
+    return members
+
+
+def _assign_group_ids(games: list[Game], members: dict[int, list[int]]) -> None:
+    for root, indices in members.items():
+        group_id = None
+        if len(indices) > 1:
+            base_title = games[root].title
+            group_id = strip_edition_suffix(normalize_for_match(base_title))
+        for i in indices:
+            games[i].dedupe_group_id = group_id
+            games[i].edition_label = extract_edition_label(games[i].title)
+
+
 def annotate_duplicate_groups(
     games: Sequence[Game],
     *,
@@ -99,48 +159,39 @@ def annotate_duplicate_groups(
     aggregates Epic/GOG/Amazon/Ubisoft/Battle.net/Microsoft.
     """
     games = list(games)
-    buckets: dict[str, list[int]] = {}
-    for index, game in enumerate(games):
-        for key in _bucket_keys(game.title):
-            buckets.setdefault(key, []).append(index)
-
-    # Union-find over game indices.
-    parent = list(range(len(games)))
-
-    def find(i: int) -> int:
-        while parent[i] != i:
-            parent[i] = parent[parent[i]]
-            i = parent[i]
-        return i
-
-    def union(a: int, b: int) -> None:
-        ra, rb = find(a), find(b)
-        if ra != rb:
-            parent[rb] = ra
-
-    for indices in buckets.values():
-        for pos, i in enumerate(indices):
-            for j in indices[pos + 1 :]:
-                if titles_match(games[i].title, games[j].title):
-                    union(i, j)
-
-    members: dict[int, list[int]] = {}
-    for i in range(len(games)):
-        members.setdefault(find(i), []).append(i)
-
-    for root, indices in members.items():
-        group_id = None
-        if len(indices) > 1:
-            base_title = games[root].title
-            group_id = strip_edition_suffix(normalize_for_match(base_title))
-        for i in indices:
-            games[i].dedupe_group_id = group_id
-            games[i].edition_label = extract_edition_label(games[i].title)
+    buckets = _bucket_by_title(games)
+    uf = _union_matching_titles(games, buckets)
+    members = _group_members(games, uf)
+    _assign_group_ids(games, members)
 
     if steam_owned:
         _annotate_steam_owned(games, steam_owned)
 
     return games
+
+
+def _bucket_steam_owned(
+    steam_owned: Mapping[str, OwnedApp],
+) -> dict[str, list[tuple[str, OwnedApp]]]:
+    owned_buckets: dict[str, list[tuple[str, OwnedApp]]] = {}
+    for normalized_title, owned_app in steam_owned.items():
+        if not normalized_title:
+            continue
+        owned_buckets.setdefault(normalized_title.split()[0], []).append(
+            (normalized_title, owned_app),
+        )
+    return owned_buckets
+
+
+def _find_steam_owned_match(
+    game: Game,
+    owned_buckets: dict[str, list[tuple[str, OwnedApp]]],
+) -> OwnedApp | None:
+    for key in _bucket_keys(game.title):
+        for normalized_title, owned_app in owned_buckets.get(key, []):
+            if titles_match(game.title, normalized_title):
+                return owned_app
+    return None
 
 
 def _annotate_steam_owned(
@@ -162,25 +213,10 @@ def _annotate_steam_owned(
     Edition" copy) and assuming they're the same edition would just
     trade one wrong label for another.
     """
-    owned_buckets: dict[str, list[tuple[str, OwnedApp]]] = {}
-    for normalized_title, owned_app in steam_owned.items():
-        if not normalized_title:
-            continue
-        owned_buckets.setdefault(normalized_title.split()[0], []).append(
-            (normalized_title, owned_app),
-        )
-
+    owned_buckets = _bucket_steam_owned(steam_owned)
     for game in games:
-        for key in _bucket_keys(game.title):
-            candidates = owned_buckets.get(key)
-            if not candidates:
-                continue
-            for normalized_title, owned_app in candidates:
-                if titles_match(game.title, normalized_title):
-                    game.steam_owned_app_id = owned_app.appid
-                    game.steam_owned_edition_label = extract_edition_label(
-                        owned_app.title,
-                    )
-                    break
-            if game.steam_owned_app_id is not None:
-                break
+        owned_app = _find_steam_owned_match(game, owned_buckets)
+        if owned_app is None:
+            continue
+        game.steam_owned_app_id = owned_app.appid
+        game.steam_owned_edition_label = extract_edition_label(owned_app.title)

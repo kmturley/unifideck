@@ -302,7 +302,7 @@ def extract_edition_label(title: str) -> str | None:
     base_word_count = len(base.split())
     if base_word_count >= len(words):
         return None
-    return " ".join(words[base_word_count:]).strip(" :-–—")
+    return " ".join(words[base_word_count:]).strip(" :-–—")  # noqa: RUF001 — real en/em dashes appear in titles
 
 
 def score_match(query_norm: str, candidate_norm: str) -> float:

@@ -11,16 +11,14 @@ vi.mock("@decky/ui", () => ({
 import { navigateToApp } from "./navigate-to-app";
 
 describe("navigateToApp", () => {
-  const originalSteamUIStore = (window as unknown as { SteamUIStore?: unknown })
-    .SteamUIStore;
+  const originalSteamUIStore = (window as unknown as { SteamUIStore?: unknown }).SteamUIStore;
 
   beforeEach(() => {
     routerMock = {};
   });
 
   afterEach(() => {
-    (window as unknown as { SteamUIStore?: unknown }).SteamUIStore =
-      originalSteamUIStore;
+    (window as unknown as { SteamUIStore?: unknown }).SteamUIStore = originalSteamUIStore;
   });
 
   it("calls Navigator.App on the focused window instance", () => {

@@ -57,7 +57,10 @@ export function navigateToApp(appId: number): void {
   try {
     win = steamUIStore?.GetFocusedWindowInstance?.();
   } catch (e) {
-    console.error("[Unifideck] navigateToApp: GetFocusedWindowInstance failed", e);
+    console.error(
+      "[Unifideck] navigateToApp: GetFocusedWindowInstance failed",
+      e,
+    );
   }
 
   if (!win?.Navigator) {
@@ -69,7 +72,9 @@ export function navigateToApp(appId: number): void {
   }
 
   if (!win?.Navigator) {
-    console.error("[Unifideck] navigateToApp: no window with a Navigator found");
+    console.error(
+      "[Unifideck] navigateToApp: no window with a Navigator found",
+    );
     return;
   }
   win.Navigator.App(toUnsignedAppId(appId));
