@@ -97,7 +97,7 @@ def load_frontend_owned_titles() -> frozenset[str]:
     return frozenset(t for t in titles if isinstance(t, str) and t)
 
 
-def save_frontend_owned_games(raw_games: list[dict[str, Any]]) -> int:
+def save_frontend_owned_games(raw_games: list[Any]) -> int:
     """Persist frontend-supplied ``{title, appid}`` owned-Steam-game pairs.
 
     Companion to :func:`save_frontend_owned_titles` — same purpose
