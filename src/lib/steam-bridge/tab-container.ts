@@ -16,6 +16,7 @@ import {
   setStoreCountSink,
   type TabFilter,
 } from "../library-filters";
+import { GROUP_DUPLICATES_EVENT } from "../group-duplicates-setting";
 import { compatTabTitleKey } from "../device-type";
 import type { SteamAppOverview } from "../../types/steam";
 
@@ -475,5 +476,14 @@ export const tabManager = new TabManager();
 // future ``loadUnifideckCache`` invocation.
 setStoreCountSink((counts) => {
   tabManager.setStoreCounts(counts);
+  if (tabManager.isInitialized()) tabManager.rebuildTabs();
+});
+
+// Force every tab's ``buildCollection`` to re-run when the "Group
+// duplicates" setting flips, so grouping takes effect immediately
+// instead of waiting for the next unrelated re-render. The filter
+// functions themselves read the setting live either way (no caching),
+// so this is a live-refresh nicety, not a correctness requirement.
+window.addEventListener(GROUP_DUPLICATES_EVENT, () => {
   if (tabManager.isInitialized()) tabManager.rebuildTabs();
 });

@@ -1049,7 +1049,9 @@
   "collectionSettings": {
     "title": "STEAM 收藏夹",
     "enabled": "收藏夹已启用",
-    "disabled": "收藏夹已禁用"
+    "disabled": "收藏夹已禁用",
+    "groupDuplicates": "合并重复项",
+    "groupDuplicatesDescription": "将同一游戏在不同商店的副本合并为“所有游戏”“Deck 最佳”和“已安装”标签页中的一个图块。默认关闭——每个商店的副本将单独显示。"
   },
   "reconcile": {
     "repairedTitle": "库数据已修复",

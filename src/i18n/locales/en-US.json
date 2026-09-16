@@ -629,7 +629,9 @@
   "collectionSettings": {
     "title": "STEAM COLLECTIONS",
     "enabled": "Collections enabled",
-    "disabled": "Collections disabled"
+    "disabled": "Collections disabled",
+    "groupDuplicates": "Group duplicates",
+    "groupDuplicatesDescription": "Collapse a title's copies from different stores into one tile in All Games, Great on Deck, and Installed. Off by default — each store's copy shows separately."
   },
   "installLanguageModal": {
     "title": "Select Language",

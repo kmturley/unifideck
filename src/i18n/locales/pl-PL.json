@@ -1049,7 +1049,9 @@
   "collectionSettings": {
     "title": "KOLEKCJE STEAM",
     "enabled": "Kolekcje włączone",
-    "disabled": "Kolekcje wyłączone"
+    "disabled": "Kolekcje wyłączone",
+    "groupDuplicates": "Grupuj duplikaty",
+    "groupDuplicatesDescription": "Łączy kopie tytułu z różnych sklepów w jeden kafelek w zakładkach Wszystkie gry, Świetne na Decka i Zainstalowane. Domyślnie wyłączone — kopia z każdego sklepu jest wyświetlana osobno."
   },
   "reconcile": {
     "repairedTitle": "Naprawiono dane biblioteki",

@@ -30,6 +30,7 @@ import {
 } from "../steam-bridge/compat-packed";
 import { invalidateGameSize } from "../game-size-cache";
 import { STORE_PRIORITY } from "../game-grouping";
+import { isGroupDuplicatesEnabled } from "../group-duplicates-setting";
 import type { SteamAppOverview } from "../../types/steam";
 
 export type StoreSlug =
@@ -182,30 +183,45 @@ export function getGroupSiblings(appId: number): GroupSibling[] {
   return [...crossStoreSiblings, steamEntry];
 }
 
-/** Every appId the native "All Games" tab hides because a better tile
- *  already represents the same title. Two reasons feed this set:
+/** Every appId that's redundant once "Group duplicates" is on — a
+ *  better tile already represents the same title, so this one is hidden
+ *  from "All Games", "Great on Deck", and "Installed" alike (via
+ *  {@link hideAsDuplicate}). Two reasons feed this set:
  *
  *  1. Not the chosen "primary" of a cross-store duplicate group — the
  *     surviving tile is whichever store's shortcut
  *     {@link pickGroupPrimary} chose.
  *  2. The game is also owned on real native Steam
  *     (`steamOwnedAppId` set) — the native Steam tile already shows
- *     through the "all" filter unconditionally, so every Unifideck
- *     copy is redundant, primary or not.
+ *     unconditionally, so every Unifideck copy is redundant, primary or
+ *     not.
  *
- *  Populated alongside ``unifideckGameCache``. Steam's native tile
- *  renderer (unlike our own `GameGrid`) can't show a multi-store badge
- *  cluster, so this is a plain hide rather than a merge — the
- *  detail-page store switcher (`GameStoreSwitcher`) is how the other
- *  stores (Steam included) stay reachable. */
+ *  Populated alongside ``unifideckGameCache`` — unconditionally,
+ *  regardless of the "Group duplicates" setting, since membership here
+ *  answers "is this a duplicate", not "should it be hidden right now".
+ *  Steam's native tile renderer (unlike our own `GameGrid`) can't show a
+ *  multi-store badge cluster, so grouping is a plain hide rather than a
+ *  merge — the detail-page store switcher (`GameStoreSwitcher`) is how
+ *  the other stores (Steam included) stay reachable regardless of the
+ *  setting. */
 const nonPrimaryDuplicateAppIds: Set<number> = new Set();
 
-/** True if ``appId`` should be hidden from the "All Games" tab because
- *  a better tile already represents the same title — see
- *  {@link nonPrimaryDuplicateAppIds} for the two reasons. False for
- *  ungrouped, not-Steam-owned games and for a duplicate group's primary. */
+/** True if ``appId`` is a redundant copy of an already-shown title — see
+ *  {@link nonPrimaryDuplicateAppIds} for the two reasons. Does NOT
+ *  account for the "Group duplicates" setting — see {@link
+ *  hideAsDuplicate} for the gated version the tab filters actually use.
+ *  False for ungrouped, not-Steam-owned games and for a duplicate
+ *  group's primary. */
 export function isHiddenDuplicate(appId: number): boolean {
   return nonPrimaryDuplicateAppIds.has(appId);
+}
+
+/** Gate for every native-tab duplicate hide — "All Games", "Great on
+ *  Deck", and "Installed" alike. Reads the setting live (no caching) so
+ *  flipping it in Settings takes effect on the very next filter pass,
+ *  not just after a `tabManager.rebuildTabs()` round-trip. */
+function hideAsDuplicate(appId: number): boolean {
+  return isGroupDuplicatesEnabled() && isHiddenDuplicate(appId);
 }
 
 /** Same precedence `game-grouping.ts`'s `pickPrimary` uses for the (today
@@ -443,12 +459,16 @@ const filterFunctions: { [K in FilterType]: FilterFn<K> } = {
     if (app.app_type !== NON_STEAM_APP_TYPE) return true;
     if (!isUnifideckGame(app.appid)) return false;
     // Cross-store duplicates: only the chosen primary's tile shows here —
-    // see nonPrimaryDuplicateAppIds. Steam's native tile can't render a
-    // multi-store badge cluster, so this is a hide, not a merge; the
-    // detail-page store switcher covers switching to the hidden stores.
-    return !isHiddenDuplicate(app.appid);
+    // see nonPrimaryDuplicateAppIds — but only when the user opted into
+    // grouping (default off: separate items, one tile per store). Steam's
+    // native tile can't render a multi-store badge cluster, so this is a
+    // hide, not a merge; the detail-page store switcher covers switching
+    // to the hidden stores regardless of the setting.
+    if (hideAsDuplicate(app.appid)) return false;
+    return true;
   },
   installed: (params, app) => {
+    if (hideAsDuplicate(app.appid)) return false;
     const isInstalled = getInstalledStatus(
       app.appid,
       app.app_type,
@@ -475,6 +495,7 @@ const filterFunctions: { [K in FilterType]: FilterFn<K> } = {
     return store === params.store;
   },
   deckCompat: (_p, app) => {
+    if (hideAsDuplicate(app.appid)) return false;
     // Read the bits for the device actually running. Steam packs a
     // separate rating per device, and on a Machine the Deck's bits are
     // not the ones its own filters and badges use.

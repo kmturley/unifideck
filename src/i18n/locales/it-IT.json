@@ -1049,7 +1049,9 @@
   "collectionSettings": {
     "title": "COLLEZIONI DI STEAM",
     "enabled": "Collezioni abilitate",
-    "disabled": "Collezioni disabilitate"
+    "disabled": "Collezioni disabilitate",
+    "groupDuplicates": "Raggruppa duplicati",
+    "groupDuplicatesDescription": "Unisce le copie di un titolo provenienti da negozi diversi in un'unica scheda in Tutti i giochi, Ottimale per Deck e Installati. Disattivato per impostazione predefinita: la copia di ogni negozio viene mostrata separatamente."
   },
   "reconcile": {
     "repairedTitle": "Dati della libreria riparati",

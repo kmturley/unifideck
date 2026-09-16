@@ -1049,7 +1049,9 @@
   "collectionSettings": {
     "title": "COLLECTIONS STEAM",
     "enabled": "Collections activées",
-    "disabled": "Collections désactivées"
+    "disabled": "Collections désactivées",
+    "groupDuplicates": "Regrouper les doublons",
+    "groupDuplicatesDescription": "Fusionne les copies d'un titre provenant de différentes boutiques en une seule vignette dans Tous les jeux, Idéal sur Deck et Installés. Désactivé par défaut — la copie de chaque boutique s'affiche séparément."
   },
   "reconcile": {
     "repairedTitle": "Données de la bibliothèque réparées",

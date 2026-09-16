@@ -1049,7 +1049,9 @@
   "collectionSettings": {
     "title": "STEAM-COLLECTIES",
     "enabled": "Collecties ingeschakeld",
-    "disabled": "Collecties uitgeschakeld"
+    "disabled": "Collecties uitgeschakeld",
+    "groupDuplicates": "Duplicaten groeperen",
+    "groupDuplicatesDescription": "Voegt kopieën van een titel uit verschillende stores samen tot één tegel in Alle games, Geweldig op Deck en Geïnstalleerd. Standaard uitgeschakeld — de kopie van elke store wordt apart weergegeven."
   },
   "reconcile": {
     "repairedTitle": "Bibliotheekgegevens hersteld",

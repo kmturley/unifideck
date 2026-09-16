@@ -1049,7 +1049,9 @@
   "collectionSettings": {
     "title": "STEAM 컬렉션",
     "enabled": "컬렉션 활성화됨",
-    "disabled": "컬렉션 비활성화됨"
+    "disabled": "컬렉션 비활성화됨",
+    "groupDuplicates": "중복 항목 그룹화",
+    "groupDuplicatesDescription": "전체 게임, Deck에 최적, 설치됨 탭에서 여러 스토어의 동일한 게임 사본을 하나의 타일로 묶어서 표시합니다. 기본값은 꺼짐이며, 각 스토어의 사본이 개별적으로 표시됩니다."
   },
   "reconcile": {
     "repairedTitle": "라이브러리 데이터 복구됨",

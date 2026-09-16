@@ -629,7 +629,9 @@
   "collectionSettings": {
     "title": "STEAM 收藏",
     "enabled": "已啟用收藏",
-    "disabled": "已禁用收藏"
+    "disabled": "已禁用收藏",
+    "groupDuplicates": "合併重複項目",
+    "groupDuplicatesDescription": "將同一款遊戲在不同商店的副本合併為「所有遊戲」、「Deck 最佳」和「已安裝」分頁中的單一圖塊。預設為關閉——每個商店的副本將個別顯示。"
   },
   "installLanguageModal": {
     "title": "選擇語言",

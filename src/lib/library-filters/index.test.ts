@@ -23,8 +23,25 @@ vi.mock("../../api/event-bus-client", () => ({
     subscribe: vi.fn(),
   },
 }));
+// The real module is localStorage-backed, and this test environment's
+// `window.localStorage` doesn't implement `setItem`/`getItem` (a known
+// jsdom/vitest-environment limitation — see the pre-existing, unrelated
+// `collection-manager.test.ts` failures for the same root cause). An
+// in-memory stand-in keeps these tests deterministic without depending
+// on that.
+vi.mock("../group-duplicates-setting", () => {
+  let enabled = false;
+  return {
+    GROUP_DUPLICATES_EVENT: "unifideck:group-duplicates-change",
+    isGroupDuplicatesEnabled: () => enabled,
+    setGroupDuplicatesEnabled: (on: boolean) => {
+      enabled = on;
+    },
+  };
+});
 
 import { call } from "@decky/api";
+import { meetsGreatOnCurrentDevice } from "../protondb-cache";
 import {
   runFilter,
   unifideckGameCache,
@@ -37,10 +54,19 @@ import {
   appIdsMatch,
   type UnifideckGameInput,
 } from "./index";
+import {
+  isGroupDuplicatesEnabled,
+  setGroupDuplicatesEnabled,
+} from "../group-duplicates-setting";
 import type { SteamAppOverview } from "../../types/steam";
 
 const NON_STEAM_APP_TYPE = 1073741824;
 const mockCall = vi.mocked(call);
+
+// Every test in this file should start from the documented default (off).
+afterEach(() => {
+  setGroupDuplicatesEnabled(false);
+});
 
 describe("library-filters/index.ts installed filter", () => {
   beforeEach(() => {
@@ -123,6 +149,7 @@ describe('"all" filter hides non-primary cross-store duplicates', () => {
   beforeEach(() => {
     unifideckGameCache.clear();
     validThirdPartyCache.clear();
+    setGroupDuplicatesEnabled(true); // this describe block tests the hidden case
   });
 
   function appFor(appId: number): SteamAppOverview {
@@ -203,6 +230,7 @@ describe("Steam-owned cross-reference", () => {
   beforeEach(() => {
     unifideckGameCache.clear();
     validThirdPartyCache.clear();
+    setGroupDuplicatesEnabled(true); // this describe block tests the hidden case
   });
 
   function appFor(appId: number): SteamAppOverview {
@@ -365,6 +393,107 @@ describe("appIdsMatch", () => {
 
   it("does not match unrelated appids", () => {
     expect(appIdsMatch(1, 2)).toBe(false);
+  });
+});
+
+describe('"Group duplicates" setting', () => {
+  beforeEach(() => {
+    unifideckGameCache.clear();
+    validThirdPartyCache.clear();
+  });
+
+  afterEach(() => {
+    vi.mocked(meetsGreatOnCurrentDevice).mockReset();
+  });
+
+  function appFor(appId: number): SteamAppOverview {
+    return {
+      appid: appId,
+      app_type: NON_STEAM_APP_TYPE,
+      installed: true,
+      display_name: "whatever",
+    } as unknown as SteamAppOverview;
+  }
+
+  const duplicateGames: UnifideckGameInput[] = [
+    { appId: 1, store: "epic", isInstalled: true, dedupeGroupId: "g" },
+    { appId: 2, store: "amazon", isInstalled: true, dedupeGroupId: "g" },
+  ];
+
+  it("defaults to off — isGroupDuplicatesEnabled() is false with no prior choice", () => {
+    expect(isGroupDuplicatesEnabled()).toBe(false);
+  });
+
+  it("off by default: the All Games tab shows every store's copy separately", () => {
+    updateUnifideckCache(duplicateGames);
+
+    const visible = duplicateGames.filter((g) =>
+      runFilter({ type: "all", params: {} }, appFor(g.appId)),
+    );
+    expect(visible).toHaveLength(2);
+  });
+
+  it("on: the All Games tab collapses to the primary tile only", () => {
+    setGroupDuplicatesEnabled(true);
+    updateUnifideckCache(duplicateGames);
+
+    const visible = duplicateGames.filter((g) =>
+      runFilter({ type: "all", params: {} }, appFor(g.appId)),
+    );
+    expect(visible).toHaveLength(1);
+  });
+
+  it("off by default: the Installed tab shows every store's copy separately", () => {
+    updateUnifideckCache(duplicateGames);
+
+    const visible = duplicateGames.filter((g) =>
+      runFilter(
+        { type: "installed", params: { installed: true } },
+        appFor(g.appId),
+      ),
+    );
+    expect(visible).toHaveLength(2);
+  });
+
+  it("on: the Installed tab also collapses duplicates to the primary tile", () => {
+    setGroupDuplicatesEnabled(true);
+    updateUnifideckCache(duplicateGames);
+
+    const visible = duplicateGames.filter((g) =>
+      runFilter(
+        { type: "installed", params: { installed: true } },
+        appFor(g.appId),
+      ),
+    );
+    expect(visible).toHaveLength(1);
+  });
+
+  it("off by default: the Great on Deck tab shows every store's copy separately", () => {
+    vi.mocked(meetsGreatOnCurrentDevice).mockReturnValue(true);
+    updateUnifideckCache(duplicateGames);
+
+    const visible = duplicateGames.filter((g) =>
+      runFilter({ type: "deckCompat", params: {} }, appFor(g.appId)),
+    );
+    expect(visible).toHaveLength(2);
+  });
+
+  it("on: the Great on Deck tab also collapses duplicates to the primary tile", () => {
+    vi.mocked(meetsGreatOnCurrentDevice).mockReturnValue(true);
+    setGroupDuplicatesEnabled(true);
+    updateUnifideckCache(duplicateGames);
+
+    const visible = duplicateGames.filter((g) =>
+      runFilter({ type: "deckCompat", params: {} }, appFor(g.appId)),
+    );
+    expect(visible).toHaveLength(1);
+  });
+
+  it("isHiddenDuplicate itself is unaffected by the setting — only the tab filters gate on it", () => {
+    updateUnifideckCache(duplicateGames);
+    // Group membership is computed unconditionally; "off" only stops the
+    // tab filters from acting on it.
+    expect(isHiddenDuplicate(1) || isHiddenDuplicate(2)).toBe(true);
   });
 });
 

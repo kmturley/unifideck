@@ -1049,7 +1049,9 @@
   "collectionSettings": {
     "title": "STEAM-SAMMLUNGEN",
     "enabled": "Sammlungen aktiviert",
-    "disabled": "Sammlungen deaktiviert"
+    "disabled": "Sammlungen deaktiviert",
+    "groupDuplicates": "Duplikate gruppieren",
+    "groupDuplicatesDescription": "Fasst die Kopien eines Titels aus verschiedenen Stores in „Alle Spiele“, „Optimal für Deck“ und „Installiert“ zu einer Kachel zusammen. Standardmäßig deaktiviert – jede Store-Kopie wird separat angezeigt."
   },
   "reconcile": {
     "repairedTitle": "Bibliotheksdaten repariert",
