@@ -1060,6 +1060,17 @@
     "enabled": "Collections activées",
     "disabled": "Collections désactivées"
   },
+  "storeOwnership": {
+    "settingsTitle": "BOUTIQUE STEAM",
+    "toggleLabel": "Signaler les jeux déjà possédés",
+    "toggleDescription": "Signale sur la boutique Steam les jeux que vous possédez dans d'autres boutiques (mode Jeu).",
+    "tagOwned": "Possédé",
+    "tagCloud": "Cloud",
+    "messageOwned": "Vous possédez déjà ce jeu sur :",
+    "messageCloud": "Jouable via Xbox Cloud Gaming",
+    "installed": "Installé",
+    "via": "par Unifideck"
+  },
   "reconcile": {
     "repairedTitle": "Données de la bibliothèque réparées",
     "repairedBody": "{{artwork}} visuels, {{metadata}} métadonnées et {{compat}} entrées de compatibilité complétés après une synchronisation interrompue."

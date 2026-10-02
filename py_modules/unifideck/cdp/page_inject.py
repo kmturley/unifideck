@@ -65,15 +65,22 @@ async def _drain_until_reply(
             return False
         return True
 
-async def _inject_into_target(
+async def inject_into_target(
     target: dict[str, Any],
     sources: list[str],
     *,
     ws_timeout: float,
     logger_prefix: str,
 ) -> bool:
+    """Evaluate each of *sources* in one already-chosen page target.
 
-    """Inject into target."""
+    One short-lived websocket per call. Public for callers that pick their
+    own targets (``cdp/store_ribbon`` matches by exact Steam AppID); callers
+    that match by URL substring and poll should use :func:`inject_scripts`.
+    Returns False on a closed socket, a CDP-level error or a network
+    failure. A script that throws inside the page still returns True, because
+    CDP reports that as ``exceptionDetails``, not ``error``.
+    """
     ws_url = target.get("webSocketDebuggerUrl")
     if not isinstance(ws_url, str) or not ws_url:
         return False
@@ -215,7 +222,7 @@ async def _inject_into_matching_targets(
     all_ok = True
     had_success = False
     for target in page_targets:
-        ok = await _inject_into_target(
+        ok = await inject_into_target(
             target,
             sources,
             ws_timeout=min(15.0, timeout),

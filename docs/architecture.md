@@ -82,6 +82,7 @@ Infrastructure primitives. No store or service knowledge.
 | `paths.py`                      | Canonical path resolution                 |
 | `store_urls.py`                 | Per-store storefront/search URL builders  |
 | `cross_source_dedupe.py`        | Drops a title owned on two stores at once |
+| `cross_store_ownership.py`      | Which non-Steam stores hold a given Steam AppID. The Steam Store ownership ribbon's join, built on demand from the live library |
 | `safe_delete.py`                | Guarded delete used by every sweep        |
 | `cleanup_sweeps.py`             | The blocking sweeps behind "delete all data" |
 | `marker_sweep.py`               | Install-dir ownership via `.unifideck*` markers |
@@ -177,6 +178,7 @@ The `Plugin` class in `main.py` is composed from the RPC mixin classes enumerate
 | `EdgeRPCMixin`             | `install_edge`                                                                  |
 | `ExecutableRPCMixin`       | `list_game_executables`, `set_game_executable`, `reset_game_executable`          |
 | `LibraryFacetsRPCMixin`    | `get_overview_enrichment`                                                       |
+| `StoreOwnershipRPCMixin`   | `show_store_ownership` (draws the "already owned" ribbon on a Steam Store page; CDP only when owned) |
 | `PlaytimeRPCMixin`         | `get_playtime`                                                                  |
 | `ObservabilityRPCMixin`    | `subscribe_replay`, `get_launcher_toasts`, `capture_logs`                        |
 | `ActionRPCMixin`           | `dispatch_unifideck_action` (URI dispatch)                                      |
@@ -196,7 +198,7 @@ These sit alongside the layered stack and can be imported by any layer.
 | ---------------- | ---------------------------------------------------------------------------------------------------------- |
 | `accounts/`      | Account-switch detection + data migration (backs `AccountRPCMixin`)                                         |
 | `auth/`          | OAuth browser monitor + multi-store auth orchestrator + Edge browser shims                                 |
-| `cdp/`           | Chrome DevTools Protocol injection utilities                                                               |
+| `cdp/`           | Chrome DevTools Protocol injection utilities: target listing + script injection, the xCloud shims, and the Steam Store ownership ribbon (`store_ribbon`, `store_ribbon_js`) |
 | `compatibility/` | Proton/Wine prefix management and helper wrappers                                                          |
 | `event_bus/`     | The message backbone. Broken out below, because half of it is not on the emit path                          |
 | `config/`        | Config manager, JSON schema validator, i18n schema, startup validation                                     |

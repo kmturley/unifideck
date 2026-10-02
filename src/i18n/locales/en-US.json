@@ -639,6 +639,17 @@
     "enabled": "Collections enabled",
     "disabled": "Collections disabled"
   },
+  "storeOwnership": {
+    "settingsTitle": "STEAM STORE",
+    "toggleLabel": "Show games you already own",
+    "toggleDescription": "Marks Steam Store pages of games you own on other stores (Gaming Mode).",
+    "tagOwned": "Owned",
+    "tagCloud": "Cloud",
+    "messageOwned": "You already own this game on:",
+    "messageCloud": "Playable via Xbox Cloud Gaming",
+    "installed": "Installed",
+    "via": "via Unifideck"
+  },
   "installLanguageModal": {
     "title": "Select Language",
     "description": "Choose which language to download for {{title}}",

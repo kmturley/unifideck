@@ -1060,6 +1060,17 @@
     "enabled": "Коллекции включены",
     "disabled": "Коллекции выключены"
   },
+  "storeOwnership": {
+    "settingsTitle": "МАГАЗИН STEAM",
+    "toggleLabel": "Отмечать игры, которые у вас уже есть",
+    "toggleDescription": "Отмечает страницы магазина Steam с играми, которые есть у вас в других магазинах (игровой режим).",
+    "tagOwned": "Приобретено",
+    "tagCloud": "Облако",
+    "messageOwned": "Эта игра у вас уже есть в:",
+    "messageCloud": "Доступна в Xbox Cloud Gaming",
+    "installed": "Установлено",
+    "via": "через Unifideck"
+  },
   "reconcile": {
     "repairedTitle": "Данные библиотеки восстановлены",
     "repairedBody": "Дополнено обложек: {{artwork}}, метаданных: {{metadata}}, записей совместимости: {{compat}} — после прерванной синхронизации."

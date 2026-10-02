@@ -221,3 +221,32 @@ document.querySelector("[data-unifideck-hidden-native=" + appId + "]");
 3. **`/json/version` CDP endpoint** — Connects to browser-level context, not SP page tab. Use `/json`.
 4. **Unmount cleanup for CDP** — React re-renders trigger unmount/remount, causing premature unhide. Use `prevAppIdRef` for navigation-aware cleanup.
 5. **Splicing at index 0** — Places components above the hero image. Splice at index 2+ to position below hero.
+
+---
+
+## 5. Steam Store page injection (CDP)
+
+The "already owned elsewhere" ribbon is the one place Unifideck writes DOM directly, because there is no other way in. In Gaming Mode the Steam Store is a separate CEF BrowserView, composited **above** the Big Picture window (bounds measured on-device: `{x:0, y:40, w:1278, h:601}`). React rendered in Steam's own window can only paint the header and footer strips around it, which is why IsThereAnyDeal for Deck draws a fixed bar in the footer. ProtonDB Badges and DeckySales instead inject into the store page over CDP; so does this.
+
+| Step | Where | How |
+| ---- | ----- | --- |
+| Notice navigation | `src/lib/steam-bridge/store-ownership-ribbon.ts` | `GamepadUIMainWindowInstance.m_StoreBrowser.FinishedRequestCallbacks.Register(cb)`, which receives `(url, title)` on every finished page load. No CDP, no polling |
+| Decide | `rpc/mixins/store_ownership.py` | joins the live library with `steam_real_appid`; returns `not_owned` before any CDP work |
+| Draw | `cdp/store_ribbon.py` + `cdp/store_ribbon_js.py` | finds page targets on that exact AppID and evaluates the ribbon script |
+
+Findings verified with steam-debug on 2026-10-02:
+
+1. **The callback list is Steam's own and additive.** `FinishedRequestCallbacks` is a getter; `Register` pushes onto `m_vecCallbacks` and returns `{Unregister}`. It fired for `steam://openurl`, in-page link clicks and `GoBack()`. The browser object survived leaving the store and returning, but it is created lazily, so registration is retried on route changes into `/steamweb`.
+2. **`window.MainWindowBrowserManager` is the desktop UI's browser.** In Gaming Mode it stayed on the store front page while the real store was on an app page.
+3. **Back/forward loads a fresh document**, so the ribbon is redrawn on every callback and never deduplicated by URL.
+4. **Only `id` anchors are stable.** The Gamepad store page is React with hashed class names; `#FeatureTarget_*` ids and `#gamepad_carousel` survive. `#game_area_purchase` exists but is `display:none` in this layout.
+5. **Nothing may change height above the media carousel.** An in-flow banner inserted above it left the carousel's gamepad focus ring at its old position, because the ring's coordinates are computed when focus lands. Neither a blur/focus nor a `resize` event moved it. So the top placement is an absolute overlay inside the capsule-art container (the parent of `#gamepad_carousel img[src*="/header"]`), and the in-flow note sits below the carousel, just before `#FeatureTarget_purchase-options`.
+
+Rules the ribbon script follows:
+
+- Every node is built with `createElement` + `textContent`. The payload is a JSON literal (`json.dumps(..., ensure_ascii=True)`), and a test bans `innerHTML`, `insertAdjacentHTML`, `document.write` and `eval(`.
+- Store logos are the same react-icons glyphs `<StoreIcon>` renders. The frontend reads them as SVG shape data (`src/lib/steam-bridge/store-icon-spec.ts`), the backend keeps only allowlisted shape tags and presentation attributes (`rpc/mixins/_store_ribbon_icons.py`), and the page rebuilds them with `createElementNS` + `setAttribute`. A logo that does not survive the allowlist falls back to a plain dot.
+- It checks `location.pathname` against `/app/<appid>` **before** touching a previous instance, so an evaluation that lost a race with the next navigation does nothing.
+- A window-scoped handle (`__unifideckOwnershipRibbon`) keeps a repeat call idempotent and lets a new payload replace the old one.
+- A MutationObserver redraws after React re-renders; if no anchor appears within 15 s it stops and logs one console line naming the selectors.
+- Everything is `pointer-events:none` and `tabIndex=-1`: the ribbon never takes gamepad focus.

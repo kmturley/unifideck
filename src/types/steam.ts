@@ -147,6 +147,39 @@ export interface ControllerConfigInfoMessageDone {
 export type ControllerConfigInfoMessage =
   | ControllerConfigInfoMessageList
   | ControllerConfigInfoMessageDone;
+
+/**
+ * Steam's internal callback list (not `SteamClient`'s registration shape):
+ * `Register` pushes onto `m_vecCallbacks` and hands back `Unregister` with a
+ * capital U. Additive: Steam's own callback stays registered beside ours.
+ */
+export interface SteamCallbackList<TArgs extends unknown[]> {
+  Register(callback: (...args: TArgs) => void): { Unregister(): void };
+}
+
+/**
+ * The Gaming Mode Store BrowserView controller
+ * (`GamepadUIMainWindowInstance.m_StoreBrowser`). Created lazily, the first
+ * time the store opens. `FinishedRequestCallbacks` is a getter; observed
+ * callback arguments are `(url, title)`, fired for steam://openurl
+ * navigations, in-page link clicks and Back.
+ */
+export interface SteamStoreBrowser {
+  m_URL?: string;
+  readonly FinishedRequestCallbacks?: SteamCallbackList<[string, string]>;
+}
+
+/** The gamepad router's history (react-router's history object). */
+export interface SteamHistory {
+  location?: { pathname?: string };
+  listen?: (listener: (update: unknown) => void) => (() => void) | undefined;
+}
+
+/** The fields of `GamepadUIMainWindowInstance` beyond `@decky/ui`'s typing. */
+export interface GamepadMainWindowInternals {
+  m_StoreBrowser?: SteamStoreBrowser;
+  m_history?: SteamHistory;
+}
 declare global {
   /** Window. */
   interface Window {

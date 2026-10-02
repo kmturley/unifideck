@@ -1060,6 +1060,17 @@
     "enabled": "Koleksiyonlar etkin",
     "disabled": "Koleksiyonlar devre dışı"
   },
+  "storeOwnership": {
+    "settingsTitle": "STEAM MAĞAZASI",
+    "toggleLabel": "Zaten sahip olduğunuz oyunları göster",
+    "toggleDescription": "Diğer mağazalarda sahip olduğunuz oyunların Steam Mağazası sayfalarını işaretler (Oyun Modu).",
+    "tagOwned": "Sahip olunan",
+    "tagCloud": "Bulut",
+    "messageOwned": "Bu oyuna zaten şurada sahipsiniz:",
+    "messageCloud": "Xbox Cloud Gaming üzerinden oynanabilir",
+    "installed": "Yüklü",
+    "via": "Unifideck aracılığıyla"
+  },
   "reconcile": {
     "repairedTitle": "Kitaplık verileri onarıldı",
     "repairedBody": "Yarıda kalan eşitlemeden kalan {{artwork}} görsel, {{metadata}} meta veri ve {{compat}} uyumluluk kaydı tamamlandı."

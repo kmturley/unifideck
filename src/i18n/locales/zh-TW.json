@@ -639,6 +639,17 @@
     "enabled": "已啟用收藏",
     "disabled": "已禁用收藏"
   },
+  "storeOwnership": {
+    "settingsTitle": "STEAM 商店",
+    "toggleLabel": "標記您已擁有的遊戲",
+    "toggleDescription": "在 Steam 商店頁面上標記您在其他商店已擁有的遊戲（遊戲模式）。",
+    "tagOwned": "已擁有",
+    "tagCloud": "雲端",
+    "messageOwned": "您已在以下商店擁有此遊戲：",
+    "messageCloud": "可透過 Xbox 雲端遊戲遊玩",
+    "installed": "已安裝",
+    "via": "來自 Unifideck"
+  },
   "installLanguageModal": {
     "title": "選擇語言",
     "description": "選擇要下載 {{title}} 的語言",

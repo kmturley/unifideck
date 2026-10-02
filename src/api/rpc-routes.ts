@@ -64,6 +64,8 @@ export const rpcRoutes = {
   // Library facets — per-shortcut enrichment for native Sort/Filters
   // + shortcut-keyed Great-on-Deck compat (LibraryFacetsRPCMixin)
   getOverviewEnrichment: "get_overview_enrichment",
+  // Steam Store "already owned elsewhere" ribbon (StoreOwnershipRPCMixin)
+  showStoreOwnership: "show_store_ownership",
   // Steam Store spoofing (StoreRPCMixin)
   getRealSteamAppidMappings: "get_real_steam_appid_mappings",
   getSteamMetadataCache: "get_steam_metadata_cache",

@@ -1060,6 +1060,17 @@
     "enabled": "收藏夹已启用",
     "disabled": "收藏夹已禁用"
   },
+  "storeOwnership": {
+    "settingsTitle": "STEAM 商店",
+    "toggleLabel": "标记您已拥有的游戏",
+    "toggleDescription": "在 Steam 商店页面上标记您在其他商店已拥有的游戏（游戏模式）。",
+    "tagOwned": "已拥有",
+    "tagCloud": "云",
+    "messageOwned": "您已在以下商店拥有此游戏：",
+    "messageCloud": "可通过 Xbox Cloud Gaming 游玩",
+    "installed": "已安装",
+    "via": "来自 Unifideck"
+  },
   "reconcile": {
     "repairedTitle": "库数据已修复",
     "repairedBody": "已补齐上次同步中断遗留的 {{artwork}} 项封面、{{metadata}} 项元数据和 {{compat}} 项兼容性信息。"

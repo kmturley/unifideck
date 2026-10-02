@@ -1060,6 +1060,17 @@
     "enabled": "تم تمكين المجموعات",
     "disabled": "تم تعطيل المجموعات"
   },
+  "storeOwnership": {
+    "settingsTitle": "متجر STEAM",
+    "toggleLabel": "إظهار الألعاب التي تملكها بالفعل",
+    "toggleDescription": "يضع علامة على صفحات متجر Steam للألعاب التي تملكها في متاجر أخرى (وضع الألعاب).",
+    "tagOwned": "مملوكة",
+    "tagCloud": "سحابي",
+    "messageOwned": "أنت تملك هذه اللعبة بالفعل على:",
+    "messageCloud": "قابلة للعب عبر Xbox Cloud Gaming",
+    "installed": "مثبتة",
+    "via": "عبر Unifideck"
+  },
   "reconcile": {
     "repairedTitle": "تم إصلاح بيانات المكتبة",
     "repairedBody": "تمت تعبئة {{artwork}} من الصور و{{metadata}} من البيانات الوصفية و{{compat}} من إدخالات التوافق التي خلّفتها مزامنة متوقفة."

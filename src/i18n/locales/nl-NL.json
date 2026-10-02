@@ -1060,6 +1060,17 @@
     "enabled": "Collecties ingeschakeld",
     "disabled": "Collecties uitgeschakeld"
   },
+  "storeOwnership": {
+    "settingsTitle": "STEAM-WINKEL",
+    "toggleLabel": "Games tonen die je al hebt",
+    "toggleDescription": "Markeert Steam-winkelpagina's van games die je in andere winkels hebt (gamemodus).",
+    "tagOwned": "In bezit",
+    "tagCloud": "Cloud",
+    "messageOwned": "Je hebt deze game al op:",
+    "messageCloud": "Speelbaar via Xbox Cloud Gaming",
+    "installed": "Geïnstalleerd",
+    "via": "door Unifideck"
+  },
   "reconcile": {
     "repairedTitle": "Bibliotheekgegevens hersteld",
     "repairedBody": "{{artwork}} afbeeldingen, {{metadata}} metagegevens en {{compat}} compatibiliteitsvermeldingen aangevuld na een onderbroken synchronisatie."

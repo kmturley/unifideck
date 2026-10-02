@@ -28,6 +28,7 @@ from unifideck.core.store_capabilities import (
     BROWSER_STOREFRONT_STORES,
     CLOUD_SAVE_STORES,
     LANGUAGE_PICKER_STORES,
+    SUBSCRIPTION_LIBRARY_STORES,
     capability_flags,
 )
 
@@ -44,6 +45,7 @@ def test_every_capability_set_names_only_real_stores() -> None:
         ("CLOUD_SAVE_STORES", CLOUD_SAVE_STORES),
         ("LANGUAGE_PICKER_STORES", LANGUAGE_PICKER_STORES),
         ("BROWSER_STOREFRONT_STORES", BROWSER_STOREFRONT_STORES),
+        ("SUBSCRIPTION_LIBRARY_STORES", SUBSCRIPTION_LIBRARY_STORES),
     ):
         unknown = members - ALL_STORES
         assert unknown == set(), f"{name} names non-existent store(s): {unknown}"

@@ -179,5 +179,9 @@
   "gamevault.password": {
     "locales": ["it-IT"],
     "reason": "Same word as ubisoftAuth.passwordLabel, kept consistent. The other 14 locales translated this key, which is why only it-IT is listed."
+  },
+  "storeOwnership.tagCloud": {
+    "locales": ["de-DE", "fr-FR", "it-IT", "nl-NL"],
+    "reason": "A one-word tag on the Steam Store ribbon for titles playable through Xbox Cloud Gaming. German, French, Italian and Dutch use the loanword 'Cloud' itself for cloud gaming (Steam's own 'Steam Cloud' is untranslated in all four); a native word ('Wolke', 'nuage', 'nuvola', 'wolk') would read as weather. The other 11 locales translate it, which is why only these four are listed."
   }
 }

@@ -33,6 +33,7 @@ export interface TeardownHandles {
   overviewEnrichment?: (() => void) | null;
   tileStoreBadgePatch?: (() => void) | null;
   appContextMenuPatch?: { unpatch: () => void } | null;
+  storeOwnershipRibbon?: (() => void) | null;
   lifetimeListener?: Unregisterable | null;
   launcherToastPoll?: (() => void) | null;
   pluginUpdateNotice?: (() => void) | null;
@@ -66,6 +67,9 @@ const DISPOSERS: Record<keyof TeardownHandles, (h: TeardownHandles) => void> = {
   launcherToastPoll: (h) => h.launcherToastPoll?.(),
   pluginUpdateNotice: (h) => h.pluginUpdateNotice?.(),
   signedOutTabs: (h) => h.signedOutTabs?.(),
+  // Unregisters from Steam's store-browser callback list and the router
+  // history; a leak here would keep drawing ribbons after unload.
+  storeOwnershipRibbon: (h) => h.storeOwnershipRibbon?.(),
   tileStoreBadgePatch: (h) => h.tileStoreBadgePatch?.(),
   appContextMenuPatch: (h) => h.appContextMenuPatch?.unpatch(),
   lifetimeListener: (h) => h.lifetimeListener?.unregister(),

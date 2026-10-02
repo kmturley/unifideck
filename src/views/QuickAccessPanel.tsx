@@ -36,6 +36,7 @@ import {
   LanguageSelector,
   GameDetailsViewModeToggle,
   CollectionsToggle,
+  StoreOwnershipToggle,
   CleanupSection,
   CaptureLogsSection,
   PluginUpdater,
@@ -309,6 +310,7 @@ export const QuickAccessPanel: FC = () => {
             <LanguageSelector />
             <GameDetailsViewModeToggle />
             <CollectionsToggle />
+            <StoreOwnershipToggle />
             <PluginUpdater />
             <CleanupSection />
             <CaptureLogsSection />

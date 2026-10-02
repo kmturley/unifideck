@@ -1060,6 +1060,17 @@
     "enabled": "コレクションが有効",
     "disabled": "コレクションが無効"
   },
+  "storeOwnership": {
+    "settingsTitle": "STEAM ストア",
+    "toggleLabel": "所有済みのゲームを表示",
+    "toggleDescription": "他のストアで所有しているゲームの Steam ストアページに印を付けます（ゲーミングモード）。",
+    "tagOwned": "所有済み",
+    "tagCloud": "クラウド",
+    "messageOwned": "このゲームは次のストアで所有済みです:",
+    "messageCloud": "Xbox Cloud Gaming でプレイ可能",
+    "installed": "インストール済み",
+    "via": "Unifideck 経由"
+  },
   "reconcile": {
     "repairedTitle": "ライブラリデータを修復しました",
     "repairedBody": "中断された同期で残っていたアートワーク {{artwork}} 件、メタデータ {{metadata}} 件、互換性情報 {{compat}} 件を補完しました。"
