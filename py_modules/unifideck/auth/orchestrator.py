@@ -34,9 +34,9 @@ import asyncio
 import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from unifideck.auth.url_file import write_url_file_atomically
 from unifideck.core.types import AuthResult, Events
 
 if TYPE_CHECKING:
@@ -218,7 +218,7 @@ class AuthOrchestrator:
         recover the URL via the bus even if the file write
         didn't go through.
         """
-        write_ok = await self._write_url_atomically(write_url_file, url)
+        write_ok = await write_url_file_atomically(write_url_file, url)
         if write_ok:
             return None
         return await self._emit_failed(
@@ -469,49 +469,3 @@ class AuthOrchestrator:
             )
 
     # ─── I/O helpers ──────────────────────────────────────────
-
-    @staticmethod
-    async def _write_url_atomically(path: str, url: str) -> bool:
-        """Write the OAuth URL to disk atomically.
-
-        Creates the parent directory if needed, writes to a
-        `.tmp` sibling first, then renames into place. This
-        guarantees the shell launcher never reads a half-written
-        URL file.
-        """
-        def _write_sync() -> str:
-            expanded = Path(path).expanduser()
-            parent = expanded.parent
-            parent.mkdir(parents=True, exist_ok=True)
-            tmp = expanded.with_name(expanded.name + ".tmp")
-            with tmp.open("w", encoding="utf-8") as f:
-                f.write(url)
-            tmp.replace(expanded)
-            return str(expanded)
-
-        # `expanded` was bound only on the
-        # success path (the result of asyncio.to_thread). When
-        # _write_sync raised OSError, the `except` handler
-        # referenced an unbound `expanded`, producing an
-        # UnboundLocalError that masked the real OSError and
-        # propagated to the caller instead of returning False.
-        # Bind a fallback up front so the error path can always
-        # log a meaningful target path.
-        #
-        # The fallback is the raw `path` (no expanduser): the
-        # real expanded path is computed inside _write_sync and
-        # overwrites this on success. Calling Path(...).expanduser()
-        # here would be a blocking pathlib call in an async
-        # function (ASYNC240) for no benefit — the value is only
-        # ever used in the error log, where the un-expanded path
-        # (e.g. "~/.config/...") is just as diagnostic.
-        expanded = path
-        try:
-            expanded = await asyncio.to_thread(_write_sync)
-            logger.debug(
-                "[AuthOrchestrator] wrote auth URL to %s", expanded,
-            )
-            return True
-        except OSError:
-            logger.exception("[AuthOrchestrator] failed to write %s", expanded)
-            return False

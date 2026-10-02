@@ -16,6 +16,7 @@ from unifideck.rpc.mixins._store_ownership_payload import (
     RibbonStrings,
     build_ribbon_payload,
     edition_detail,
+    purchase_notes,
     parse_steam_app_id,
     read_steam_name,
     sanitize_ribbon_strings,
@@ -132,8 +133,8 @@ def test_purchases_only_payload() -> None:
         "tag": "Owned",
         "message": "You already own this game on:",
         "chips": [
-            {"label": "Amazon Games", "detail": "", "installed": True, "icon": None},
-            {"label": "GOG", "detail": "", "installed": False, "icon": None},
+            {"label": "Amazon Games", "detail": "", "installed": True, "icon": None, "notes": []},
+            {"label": "GOG", "detail": "", "installed": False, "icon": None, "notes": []},
         ],
     }]
     assert payload["installed"] == "Installed"
@@ -199,3 +200,46 @@ def test_store_logos_reach_their_chips_after_sanitising() -> None:
     assert cloud["chips"][0]["icon"] is None  # no Xbox logo was sent
     assert strings.store_icons == {"epic": epic}
 
+
+
+# ── notes on an indexed (Xbox) purchase ─────────────────────────────
+_NOTES = {
+    "pc": "PC", "console": "Console", "pc_console": "PC + Console",
+    "play_anywhere": "Play Anywhere", "gold": "Gold", "cloud": "Cloud",
+}
+
+
+@pytest.mark.parametrize(("copy", "notes"), [
+    # Play Anywhere already covers the cloud: no second note.
+    (OwnedCopy("microsoft", ("X",), False, False, platform="play_anywhere", streams=True),
+     ["Play Anywhere"]),
+    # A console-only purchase that also streams: "Cloud" is new information.
+    (OwnedCopy("microsoft", ("X",), False, False, platform="console", streams=True),
+     ["Console", "Cloud"]),
+    (OwnedCopy("microsoft", ("X",), False, False, platform="console", gold=True), ["Console", "Gold"]),
+    (OwnedCopy("microsoft", ("X",), False, False, platform="pc"), ["PC"]),
+    # A store with no purchase index (GOG) gets no notes, even if it streams.
+    (OwnedCopy("gog", ("X",), False, False, streams=True), []),
+])
+def test_purchase_notes(copy: OwnedCopy, notes: list[str]) -> None:
+    assert purchase_notes(copy, _strings(note_labels=_NOTES)) == notes
+
+
+def test_notes_need_their_translations() -> None:
+    """No translation sent → no note, never an English fallback."""
+    copy = OwnedCopy("microsoft", ("X",), False, False, platform="pc", gold=True)
+    assert purchase_notes(copy, _strings()) == []
+
+
+def test_only_known_note_keys_survive_sanitising() -> None:
+    parsed = _strings(note_labels={**_NOTES, "evil": "<script>", "pc": "  PC  "})
+    assert set(parsed.note_labels) == set(_NOTES)
+    assert parsed.note_labels["pc"] == "PC"
+
+
+def test_an_owned_xbox_chip_carries_its_notes() -> None:
+    copies = [OwnedCopy("microsoft", ("Sekiro",), False, False, platform="console")]
+    payload = build_ribbon_payload(814380, copies, _strings(note_labels=_NOTES), "Sekiro")
+    [section] = payload["sections"]
+    assert section["kind"] == "owned"
+    assert section["chips"][0]["notes"] == ["Console"]

@@ -27,7 +27,9 @@ _AUTH_STORE_LABELS = {
     "microsoft": "Microsoft",
     "itch": "itch.io",
 }
-_MAX_AUTH_SECONDS = 600
+# Longer than a Microsoft device code lives (900 s), so the backend, which
+# closes the window when the code is approved or expires, always acts first.
+_MAX_AUTH_SECONDS = 960
 def _read_config_int(key: str, default: int) -> int:
     """Read config int."""
     from unifideck.utils.config_helpers import read_config_int_cold_start

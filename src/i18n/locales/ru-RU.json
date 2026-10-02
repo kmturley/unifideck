@@ -19,11 +19,22 @@
       "failed": "Не удалось войти в {{store}}"
     },
     "hints": {
-      "itch": "itch.io снова запросит пароль. Если ключ API не показан, нажмите «Generate new API key»."
+      "itch": "itch.io снова запросит пароль. Если ключ API не показан, нажмите «Generate new API key».",
+      "microsoft": "«Разрешить доступ»"
+    },
+    "microsoft": {
+      "code": "Код",
+      "reopen": "Открыть снова"
     },
     "errors": {
       "networkTitle": "Нет подключения к интернету",
-      "networkBody": "Подключитесь к Wi-Fi и повторите попытку."
+      "networkBody": "Подключитесь к Wi-Fi и повторите попытку.",
+      "codeExpired": "Код истёк",
+      "accessDenied": "Вход отклонён",
+      "noXboxProfile": "Нет профиля Xbox",
+      "childAccount": "Детская запись",
+      "regionUnavailable": "Регион недоступен",
+      "clientRejected": "Обновите Unifideck"
     }
   },
   "storage": {
@@ -1065,10 +1076,16 @@
     "toggleLabel": "Отмечать игры, которые у вас уже есть",
     "toggleDescription": "Отмечает страницы магазина Steam с играми, которые есть у вас в других магазинах (игровой режим).",
     "tagOwned": "Приобретено",
-    "tagCloud": "Облако",
+    "tagGamePass": "Game Pass",
     "messageOwned": "Эта игра у вас уже есть в:",
-    "messageCloud": "Доступна в Xbox Cloud Gaming",
+    "messageGamePass": "Входит в Game Pass",
     "installed": "Установлено",
+    "platformPc": "PC",
+    "platformConsole": "Консоль",
+    "platformPcConsole": "PC + Консоль",
+    "platformPlayAnywhere": "Play Anywhere",
+    "noteGold": "Gold",
+    "noteCloud": "Облако",
     "via": "через Unifideck"
   },
   "reconcile": {

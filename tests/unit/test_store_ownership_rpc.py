@@ -134,3 +134,47 @@ async def test_an_unexpected_failure_never_raises(monkeypatch: pytest.MonkeyPatc
     assert await plugin.show_store_ownership(BG2, STRINGS) == {
         "shown": False, "reason": "error", "stores": [],
     }
+
+
+# ── the Xbox purchase index ──────────────────────────────────────────
+class _Ownership:
+    def __init__(self, indexes: Any = None, *, broken: bool = False) -> None:
+        self.indexes = indexes if indexes is not None else {}
+        self.broken = broken
+        self.nudges = 0
+
+    def purchase_indexes(self) -> Any:
+        if self.broken:
+            raise RuntimeError("index unavailable")
+        return self.indexes
+
+    def nudge(self) -> None:
+        self.nudges += 1
+
+
+class _Services:
+    def __init__(self, ownership: Any) -> None:
+        self.microsoft_ownership = ownership
+
+
+def test_the_purchase_index_reaches_the_join_and_is_nudged() -> None:
+    from unifideck.core.cross_store_ownership import PurchasedProduct, PurchaseIndex
+
+    plugin = _plugin([], {})
+    index = PurchaseIndex(products={"P": PurchasedProduct("Sekiro", console=True)},
+                          by_steam_appid={814380: ("P",)})
+    ownership = _Ownership({"microsoft": index})
+    plugin.services = _Services(ownership)
+    [copy] = plugin._owned_copies(814380)
+    assert copy.store == "microsoft" and copy.platform == "console"
+    assert ownership.nudges == 1
+
+
+def test_a_broken_ownership_service_falls_back_to_today() -> None:
+    plugin = _plugin([], {})
+    plugin.services = _Services(_Ownership(broken=True))
+    assert plugin._owned_copies(814380) == []
+
+
+def test_no_services_container_is_fine() -> None:
+    assert _plugin([], {})._owned_copies(814380) == []

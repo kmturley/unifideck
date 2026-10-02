@@ -19,11 +19,22 @@
       "failed": "Échec de la connexion à {{store}}"
     },
     "hints": {
-      "itch": "itch.io va redemander votre mot de passe. Si aucune clé API n’apparaît, appuyez sur « Generate new API key »."
+      "itch": "itch.io va redemander votre mot de passe. Si aucune clé API n’apparaît, appuyez sur « Generate new API key ».",
+      "microsoft": "Autoriser l'accès"
+    },
+    "microsoft": {
+      "code": "Code",
+      "reopen": "Rouvrir"
     },
     "errors": {
       "networkTitle": "Aucune connexion Internet",
-      "networkBody": "Connectez-vous au Wi-Fi et réessayez."
+      "networkBody": "Connectez-vous au Wi-Fi et réessayez.",
+      "codeExpired": "Code expiré",
+      "accessDenied": "Accès refusé",
+      "noXboxProfile": "Aucun profil Xbox",
+      "childAccount": "Compte enfant",
+      "regionUnavailable": "Région non gérée",
+      "clientRejected": "Mettez à jour"
     }
   },
   "storage": {
@@ -1065,10 +1076,16 @@
     "toggleLabel": "Signaler les jeux déjà possédés",
     "toggleDescription": "Signale sur la boutique Steam les jeux que vous possédez dans d'autres boutiques (mode Jeu).",
     "tagOwned": "Possédé",
-    "tagCloud": "Cloud",
+    "tagGamePass": "Game Pass",
     "messageOwned": "Vous possédez déjà ce jeu sur :",
-    "messageCloud": "Jouable via Xbox Cloud Gaming",
+    "messageGamePass": "Inclus dans le Game Pass",
     "installed": "Installé",
+    "platformPc": "PC",
+    "platformConsole": "Console",
+    "platformPcConsole": "PC + Console",
+    "platformPlayAnywhere": "Play Anywhere",
+    "noteGold": "Gold",
+    "noteCloud": "Cloud",
     "via": "par Unifideck"
   },
   "reconcile": {

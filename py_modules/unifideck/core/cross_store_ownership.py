@@ -17,11 +17,20 @@ navigation speed and always as fresh as the cache.
 has no TTL and is never pruned, so it still maps shortcuts for games that
 left the library. Starting from ``get_all_games()`` means a stale mapping can
 never match.
+
+**Purchase indexes.** A store whose library mixes subscription titles with
+purchases (Microsoft: xCloud lists Game Pass and owned games together) can
+pass an authenticated :class:`PurchaseIndex`. Its library rows then count
+as owned only when the index lists their product, and owned products that
+are not in the library at all (an Xbox purchase that cannot stream) match by
+the index's own Steam AppID. A product with a library row is represented by
+that row only, so one product never answers twice. Without an index the
+store behaves as before: every row is "playable", never "owned".
 """
 from __future__ import annotations
 
-from collections.abc import Iterable
-from dataclasses import dataclass
+from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass, field
 from typing import Any
 
 from unifideck.core.steam_appid_map import read_positive_steam_appid
@@ -57,10 +66,58 @@ class OwnedCopy:
     titles: tuple[str, ...]
     installed: bool
     subscription: bool
+    streams: bool = False
+    """True if a library row of this store streams it (xCloud)."""
+    platform: str = ""
+    """For an indexed purchase: ``pc``, ``console``, ``pc_console`` or
+    ``play_anywhere``; ``""`` when unknown or not indexed."""
+    gold: bool = False
+    """Every owned product is a Games with Gold grant (needs a subscription)."""
+
+
+@dataclass(frozen=True)
+class PurchasedProduct:
+    """One product in a store's purchase index."""
+
+    title: str
+    pc: bool = False
+    console: bool = False
+    play_anywhere: bool = False
+    gold: bool = False
+
+
+@dataclass(frozen=True)
+class PurchaseIndex:
+    """A store's authenticated purchase list, shaped for the join.
+
+    Attributes:
+        products: by UPPER-case store product id (``Game.store_game_id``).
+        by_steam_appid: real Steam AppID → the product ids mapped to it.
+    """
+
+    products: Mapping[str, PurchasedProduct] = field(default_factory=dict)
+    by_steam_appid: Mapping[int, tuple[str, ...]] = field(default_factory=dict)
+
+
+def platform_label(products: Sequence[PurchasedProduct]) -> str:
+    """Where the user can play the owned copies: one ``OwnedCopy.platform`` value.
+
+    One product that runs on both (Xbox Play Anywhere, or a single product
+    shipping both packages) is ``play_anywhere``; separate PC and console
+    purchases are ``pc_console``.
+    """
+    if any(p.play_anywhere or (p.pc and p.console) for p in products):
+        return "play_anywhere"
+    pc = any(p.pc for p in products)
+    console = any(p.console for p in products)
+    if pc and console:
+        return "pc_console"
+    return "pc" if pc else "console" if console else ""
 
 
 def find_owned_copies(
     games: Iterable[Game], cache: Any, steam_app_id: int,
+    purchases: Mapping[str, PurchaseIndex] | None = None,
 ) -> list[OwnedCopy]:
     """Every non-Steam store holding *steam_app_id*, purchases first.
 
@@ -69,6 +126,8 @@ def find_owned_copies(
         cache: the ``CacheManager``; a cold or raising cache yields no
             mappings, so the answer is ``[]`` rather than an error.
         steam_app_id: the real Steam AppID the store page shows.
+        purchases: authenticated purchase indexes by store id (see the
+            module docstring); ``None`` or a missing store means none.
 
     Returns:
         One :class:`OwnedCopy` per store, sorted purchased before
@@ -76,16 +135,76 @@ def find_owned_copies(
     """
     if steam_app_id <= 0:
         return []
-    grouped: dict[str, list[Game]] = {}
+    purchases = purchases or {}
+    matched, library_ids = _library_matches(games, cache, steam_app_id, purchases)
+    copies = [
+        copy for store in sorted(set(matched) | set(purchases))
+        if (copy := _store_copy(
+            store, matched.get(store, []), purchases.get(store),
+            library_ids.get(store, set()), steam_app_id,
+        )) is not None
+    ]
+    copies.sort(key=lambda c: (c.subscription, not c.installed, c.store))
+    return copies
+
+
+def _library_matches(
+    games: Iterable[Game], cache: Any, steam_app_id: int,
+    purchases: Mapping[str, PurchaseIndex],
+) -> tuple[dict[str, list[Game]], dict[str, set[str]]]:
+    """Rows mapped to *steam_app_id* per store, and every product id of the
+    indexed stores' libraries (an indexed product with a row is that row's)."""
+    matched: dict[str, list[Game]] = {}
+    library_ids: dict[str, set[str]] = {store: set() for store in purchases}
     for game in games:
         if not _counts_as_ownership(game):
             continue
-        if read_positive_steam_appid(cache, game.app_id) != steam_app_id:
-            continue
-        grouped.setdefault(game.store, []).append(game)
-    copies = [_merge(store, rows) for store, rows in grouped.items()]
-    copies.sort(key=lambda c: (c.subscription, not c.installed, c.store))
-    return copies
+        if game.store in library_ids:
+            library_ids[game.store].add(_product_id(game))
+        if read_positive_steam_appid(cache, game.app_id) == steam_app_id:
+            matched.setdefault(game.store, []).append(game)
+    return matched, library_ids
+
+
+def _store_copy(
+    store: str, rows: list[Game], index: PurchaseIndex | None,
+    library_ids: set[str], steam_app_id: int,
+) -> OwnedCopy | None:
+    """One store's answer: owned if the index says so, else playable."""
+    if index is None:
+        return _merge(store, rows) if rows else None
+    owned_rows = [r for r in rows if _product_id(r) in index.products]
+    extra_ids = [
+        pid for pid in index.by_steam_appid.get(steam_app_id, ())
+        if pid not in library_ids and pid in index.products
+    ]
+    owned = [index.products[_product_id(r)] for r in owned_rows]
+    owned += [index.products[pid] for pid in extra_ids]
+    streams = any(GameTag.XCLOUD.value in map(str, r.tags or ()) for r in rows)
+    if not owned:
+        return _merge(store, rows, streams=streams) if rows else None
+    return OwnedCopy(
+        store=store,
+        titles=_titles([r.title or "" for r in owned_rows] + [p.title for p in owned]),
+        installed=any(r.installed for r in owned_rows),
+        subscription=False,
+        streams=streams,
+        platform=platform_label(owned),
+        gold=all(p.gold for p in owned),
+    )
+
+
+def _product_id(game: Game) -> str:
+    return (game.store_game_id or "").upper()
+
+
+def _titles(candidates: Iterable[str]) -> tuple[str, ...]:
+    titles: list[str] = []
+    for raw in candidates:
+        title = raw.strip()
+        if title and title not in titles and len(titles) < _MAX_TITLES:
+            titles.append(title)
+    return tuple(titles)
 
 
 def _counts_as_ownership(game: Game) -> bool:
@@ -95,16 +214,12 @@ def _counts_as_ownership(game: Game) -> bool:
     return not any(str(tag) in NOT_OWNERSHIP_TAGS for tag in game.tags or ())
 
 
-def _merge(store: str, rows: list[Game]) -> OwnedCopy:
+def _merge(store: str, rows: list[Game], *, streams: bool = False) -> OwnedCopy:
     """Collapse one store's rows (editions, duplicates) into one copy."""
-    titles: list[str] = []
-    for row in rows:
-        title = (row.title or "").strip()
-        if title and title not in titles and len(titles) < _MAX_TITLES:
-            titles.append(title)
     return OwnedCopy(
         store=store,
-        titles=tuple(titles),
+        titles=_titles(row.title or "" for row in rows),
         installed=any(row.installed for row in rows),
         subscription=store in SUBSCRIPTION_LIBRARY_STORES,
+        streams=streams,
     )

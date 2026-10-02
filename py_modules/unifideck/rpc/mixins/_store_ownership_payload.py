@@ -12,7 +12,7 @@ a call with missing strings is a frontend bug that should draw nothing.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from unifideck.core.cross_store_ownership import OwnedCopy
@@ -32,6 +32,9 @@ _REQUIRED_STRINGS = (
     "installed", "via",
 )
 
+#: The chip notes the frontend may translate (``RibbonStrings.note_labels``).
+_NOTE_KEYS = frozenset({"pc", "console", "pc_console", "play_anywhere", "gold", "cloud"})
+
 
 @dataclass(frozen=True)
 class RibbonStrings:
@@ -47,6 +50,9 @@ class RibbonStrings:
     store_labels: dict[str, str]
     #: Allowlisted logo SVG data per store (see ``_store_ribbon_icons``).
     store_icons: dict[str, dict[str, Any]]
+    #: Chip notes for indexed purchases: ``pc``, ``console``, ``pc_console``,
+    #: ``play_anywhere``, ``gold``, ``cloud``. Optional: missing ones draw no note.
+    note_labels: dict[str, str] = field(default_factory=dict)
 
 
 def parse_steam_app_id(raw: Any) -> int | None:
@@ -72,18 +78,24 @@ def sanitize_ribbon_strings(raw: Any) -> RibbonStrings | None:
         if not isinstance(value, str) or not value.strip():
             return None
         values[key] = value.strip()[:_MAX_STRING]
-    labels_raw = raw.get("store_labels")
-    labels = {
-        store[:_MAX_STRING]: label.strip()[:_MAX_STRING]
-        for store, label in (labels_raw.items() if isinstance(labels_raw, dict) else ())
-        if isinstance(store, str) and isinstance(label, str) and label.strip()
-    }
     return RibbonStrings(
         direction="rtl" if raw.get("dir") == "rtl" else "ltr",
-        store_labels=labels,
+        store_labels=_string_map(raw.get("store_labels")),
         store_icons=sanitize_store_icons(raw.get("store_icons")),
+        note_labels={
+            k: v for k, v in _string_map(raw.get("note_labels")).items() if k in _NOTE_KEYS
+        },
         **values,
     )
+
+
+def _string_map(raw: Any) -> dict[str, str]:
+    """A ``{str: non-empty str}`` map with every key and value capped."""
+    return {
+        key[:_MAX_STRING]: value.strip()[:_MAX_STRING]
+        for key, value in (raw.items() if isinstance(raw, dict) else ())
+        if isinstance(key, str) and isinstance(value, str) and value.strip()
+    }
 
 
 def read_steam_name(cache: Any, steam_app_id: int) -> str:
@@ -154,7 +166,27 @@ def _owned_chip(
         "detail": edition_detail(copy.titles, steam_name),
         "installed": copy.installed,
         "icon": strings.store_icons.get(copy.store),
+        "notes": purchase_notes(copy, strings),
     }
+
+
+def purchase_notes(copy: OwnedCopy, strings: RibbonStrings) -> list[str]:
+    """Where an indexed purchase plays, "Gold" if it needs a subscription,
+    and "Cloud" if it also streams. Empty for stores without an index.
+
+    No "Cloud" next to "Play Anywhere": Play Anywhere already says the game
+    plays everywhere, the cloud included. It stays for a console-only or
+    PC-only purchase that also streams, where it is new information.
+    """
+    labels = strings.note_labels
+    notes = []
+    if copy.platform and labels.get(copy.platform):
+        notes.append(labels[copy.platform])
+    if copy.gold and labels.get("gold"):
+        notes.append(labels["gold"])
+    if copy.streams and copy.platform not in ("", "play_anywhere") and labels.get("cloud"):
+        notes.append(labels["cloud"])
+    return notes
 
 
 def _cloud_chips(

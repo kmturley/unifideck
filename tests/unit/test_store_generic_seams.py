@@ -43,8 +43,11 @@ async def test_microsoft_shutdown_stops_its_token_poll() -> None:
 
     store = MicrosoftStore.__new__(MicrosoftStore)
     store.stop_token_refresh_polling = AsyncMock()  # type: ignore[method-assign]
+    store._device_auth = AsyncMock()
     await store.shutdown()
     store.stop_token_refresh_polling.assert_awaited_once()
+    # A device-code sign-in in progress must not outlive the plugin.
+    store._device_auth.cancel.assert_awaited_once()
 
 
 # ── native launch cwd ──────────────────────────────────────────────────

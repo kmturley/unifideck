@@ -82,7 +82,7 @@ Infrastructure primitives. No store or service knowledge.
 | `paths.py`                      | Canonical path resolution                 |
 | `store_urls.py`                 | Per-store storefront/search URL builders  |
 | `cross_source_dedupe.py`        | Drops a title owned on two stores at once |
-| `cross_store_ownership.py`      | Which non-Steam stores hold a given Steam AppID. The Steam Store ownership ribbon's join, built on demand from the live library |
+| `cross_store_ownership.py`      | Which non-Steam stores hold a given Steam AppID. The Steam Store ownership ribbon's join, built on demand from the live library plus authenticated purchase indexes (Xbox) |
 | `safe_delete.py`                | Guarded delete used by every sweep        |
 | `cleanup_sweeps.py`             | The blocking sweeps behind "delete all data" |
 | `marker_sweep.py`               | Install-dir ownership via `.unifideck*` markers |
@@ -133,7 +133,7 @@ A connector sub-package for each store (the set is `bootstrap/cache_registry._ST
 | `stores/amazon/`    | Amazon Games            | `bin/nile`                           |
 | `stores/ubisoft/`   | Ubisoft Connect         | UPC client in a per-game Wine prefix |
 | `stores/battlenet/` | Battle.net              | Battle.net client in a Wine prefix   |
-| `stores/microsoft/` | PC Game Pass / xCloud   | Edge browser + CDP                   |
+| `stores/microsoft/` | Xbox Cloud Gaming + owned Xbox purchases | xbox.com device-code sign-in in the Edge window; Collections for ownership (`ownership/`) |
 | `stores/gamevault/` | GameVault (self-hosted) | The user's own server over HTTP, or a local folder of archives |
 | `stores/itch/`      | itch.io                 | `bin/butler/butler`, run as the butlerd JSON-RPC daemon |
 
@@ -151,6 +151,7 @@ Infrastructure services that subscribe to the EventBus and own cross-cutting con
 | `services/launcher/`               | Game launch orchestration, circuit breaker    |
 | `services/security/`               | Token store, bruteforce protection, audit log |
 | `services/microsoft_subscription/` | Game Pass entitlement probing                 |
+| `services/microsoft_ownership/`    | Xbox purchase index for the Steam Store ownership ribbon (never library rows) |
 | `services/launch_history/`         | Per-game launch timestamps                    |
 | `services/achievements/`           | Achievement fetch + last-session summary      |
 | `services/compatibility/`          | ProtonDB + Valve per-device ratings (Deck / Machine / SteamOS) |

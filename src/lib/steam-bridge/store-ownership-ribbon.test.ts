@@ -112,10 +112,20 @@ describe("buildRibbonStrings", () => {
   it("translates every key and carries the store labels", () => {
     const s = buildRibbonStrings();
     expect(s.tag_owned).toBe("t:storeOwnership.tagOwned");
-    expect(s.message_cloud).toBe("t:storeOwnership.messageCloud");
+    expect(s.message_cloud).toBe("t:storeOwnership.messageGamePass");
+    expect(s.tag_cloud).toBe("t:storeOwnership.tagGamePass");
     expect(s.dir).toBe("ltr");
     expect(s.store_labels.gog).toBe("GOG");
     expect(s.store_labels.microsoft).toBe("Xbox");
+    expect(s.note_labels.play_anywhere).toBe("t:storeOwnership.platformPlayAnywhere");
+    expect(Object.keys(s.note_labels).sort()).toEqual([
+      "cloud",
+      "console",
+      "gold",
+      "pc",
+      "pc_console",
+      "play_anywhere",
+    ]);
   });
 });
 
@@ -208,20 +218,40 @@ describe("startStoreOwnershipRibbon", () => {
     expect(callMock).not.toHaveBeenCalled();
   });
 
-  it("warns once and does not throw outside Big Picture", () => {
+  it("warns once and does not throw outside Big Picture", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     routerHolder.window = undefined;
 
     const dispose = startStoreOwnershipRibbon();
+    await vi.advanceTimersByTimeAsync(60_000); // the window never appears
     window.dispatchEvent(
       new CustomEvent("unifideck:store-ownership-enabled-change", { detail: false }),
     );
     window.dispatchEvent(
       new CustomEvent("unifideck:store-ownership-enabled-change", { detail: true }),
     );
+    await vi.advanceTimersByTimeAsync(60_000);
 
     expect(warn).toHaveBeenCalledTimes(1);
     expect(String(warn.mock.calls[0][0])).toContain("GamepadUIMainWindowInstance");
+    dispose();
+  });
+
+  it("waits for the Gaming Mode window after a Steam UI restart", async () => {
+    // Regression: Decky reloaded the plugin before Steam rebuilt its window;
+    // the ribbon gave up and stayed off for every store until a reload.
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    routerHolder.window = undefined;
+    const dispose = startStoreOwnershipRibbon();
+    await vi.advanceTimersByTimeAsync(3_000);
+
+    const { browser } = fakeBrowser(APP_URL);
+    routerHolder.window = fakeWindow(browser, "/steamweb").win;
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    expect(callMock).toHaveBeenCalledTimes(1);
+    expect(callMock.mock.calls[0][1]).toBe(257350);
+    expect(warn).not.toHaveBeenCalled();
     dispose();
   });
 

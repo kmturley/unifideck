@@ -45,6 +45,11 @@ const DEBOUNCE_MS = 300;
 /** The store BrowserView is created lazily after the route changes. */
 const RESOLVE_RETRIES = 8;
 const RESOLVE_INTERVAL_MS = 250;
+/** After a Steam UI restart Decky can load the plugin before Steam has built
+ *  its Gaming Mode window. Wait for it (60 s) instead of giving up, or the
+ *  ribbon stays off for every store until the plugin reloads. */
+const WINDOW_WAIT_TRIES = 120;
+const WINDOW_WAIT_INTERVAL_MS = 500;
 const LOG = "[Unifideck] Store ownership ribbon:";
 
 /** Translated ribbon text. The page has no i18next, so it travels with the call. */
@@ -59,6 +64,9 @@ export interface RibbonStrings {
   store_labels: Record<string, string>;
   /** Store logos as SVG data; the page falls back to a dot without one. */
   store_icons: Record<string, IconSpec>;
+  /** Notes on an owned Xbox chip: where it plays, and "Gold" (needs a
+   *  subscription). Keys match the backend's `OwnedCopy.platform`. */
+  note_labels: Record<string, string>;
 }
 
 interface ShowStoreOwnershipResult {
@@ -83,14 +91,23 @@ export function buildRibbonStrings(): RibbonStrings {
   }
   return {
     tag_owned: t("storeOwnership.tagOwned"),
-    tag_cloud: t("storeOwnership.tagCloud"),
+    // The grey line is the Xbox titles playable but not owned: Game Pass.
+    tag_cloud: t("storeOwnership.tagGamePass"),
     message_owned: t("storeOwnership.messageOwned"),
-    message_cloud: t("storeOwnership.messageCloud"),
+    message_cloud: t("storeOwnership.messageGamePass"),
     installed: t("storeOwnership.installed"),
     via: t("storeOwnership.via"),
     dir: typeof i18n.dir === "function" && i18n.dir() === "rtl" ? "rtl" : "ltr",
     store_labels: storeLabels,
     store_icons: storeIconSpecs(),
+    note_labels: {
+      pc: t("storeOwnership.platformPc"),
+      console: t("storeOwnership.platformConsole"),
+      pc_console: t("storeOwnership.platformPcConsole"),
+      play_anywhere: t("storeOwnership.platformPlayAnywhere"),
+      gold: t("storeOwnership.noteGold"),
+      cloud: t("storeOwnership.noteCloud"),
+    },
   };
 }
 
@@ -126,6 +143,7 @@ export function startStoreOwnershipRibbon(): () => void {
   let unlisten: (() => void) | null = null;
   let debounce: ReturnType<typeof setTimeout> | undefined;
   let retry: ReturnType<typeof setTimeout> | undefined;
+  let windowWait: ReturnType<typeof setTimeout> | undefined;
 
   const draw = async (appId: number) => {
     try {
@@ -203,14 +221,13 @@ export function startStoreOwnershipRibbon(): () => void {
     if (pathnameOf(update).startsWith(STORE_ROUTE)) resolveSoon();
   };
 
-  const activate = () => {
-    if (active) return;
-    active = true;
-    const win = gamepadWindow();
-    const history = win?.m_history;
+  /** Listen for Store visits on the Gaming Mode window, and register now
+   *  if a Store page is already open. */
+  const attach = (win: GamepadMainWindowInternals) => {
+    const history = win.m_history;
     if (typeof history?.listen === "function") {
       unlisten = history.listen(onRoute) ?? null;
-    } else if (win) {
+    } else {
       warnOnce(
         "history",
         "GamepadUIMainWindowInstance.m_history.listen not found. The ribbon can only attach to a Store that was already open when the plugin loaded",
@@ -224,10 +241,38 @@ export function startStoreOwnershipRibbon(): () => void {
     }
   };
 
+  const waitForWindow = (attempt = 0) => {
+    clearTimeout(windowWait);
+    if (!active) return;
+    const win = gamepadWindow();
+    if (win) {
+      attach(win);
+      return;
+    }
+    if (attempt + 1 >= WINDOW_WAIT_TRIES) {
+      warnOnce(
+        "window",
+        "Router.WindowStore.GamepadUIMainWindowInstance not found (desktop / non-Big-Picture UI). The ribbon only works in Gaming Mode",
+      );
+      return;
+    }
+    windowWait = setTimeout(
+      () => waitForWindow(attempt + 1),
+      WINDOW_WAIT_INTERVAL_MS,
+    );
+  };
+
+  const activate = () => {
+    if (active) return;
+    active = true;
+    waitForWindow();
+  };
+
   const deactivate = () => {
     active = false;
     clearTimeout(debounce);
     clearTimeout(retry);
+    clearTimeout(windowWait);
     registration?.Unregister();
     registration = null;
     browser = null;

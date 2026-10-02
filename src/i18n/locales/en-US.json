@@ -19,11 +19,22 @@
       "failed": "{{store}} sign-in failed"
     },
     "hints": {
-      "itch": "itch.io will ask for your password again. If no API key is listed, press “Generate new API key”."
+      "itch": "itch.io will ask for your password again. If no API key is listed, press “Generate new API key”.",
+      "microsoft": "Press Allow access"
+    },
+    "microsoft": {
+      "code": "Code",
+      "reopen": "Reopen"
     },
     "errors": {
       "networkTitle": "No internet connection",
-      "networkBody": "Connect to Wi-Fi and try again."
+      "networkBody": "Connect to Wi-Fi and try again.",
+      "codeExpired": "Code expired",
+      "accessDenied": "Sign-in declined",
+      "noXboxProfile": "No Xbox profile",
+      "childAccount": "Child account",
+      "regionUnavailable": "Region unsupported",
+      "clientRejected": "Update Unifideck"
     }
   },
   "storage": {
@@ -644,10 +655,16 @@
     "toggleLabel": "Show games you already own",
     "toggleDescription": "Marks Steam Store pages of games you own on other stores (Gaming Mode).",
     "tagOwned": "Owned",
-    "tagCloud": "Cloud",
+    "tagGamePass": "Game Pass",
     "messageOwned": "You already own this game on:",
-    "messageCloud": "Playable via Xbox Cloud Gaming",
+    "messageGamePass": "Included with Game Pass",
     "installed": "Installed",
+    "platformPc": "PC",
+    "platformConsole": "Console",
+    "platformPcConsole": "PC + Console",
+    "platformPlayAnywhere": "Play Anywhere",
+    "noteGold": "Gold",
+    "noteCloud": "Cloud",
     "via": "via Unifideck"
   },
   "installLanguageModal": {

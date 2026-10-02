@@ -63,7 +63,7 @@ _SECRETS: tuple[SourceSpec, ...] = (
     ),
     SourceSpec(
         key="microsoft_token", what="Microsoft/Xbox token",
-        root="config", pattern="microsoft_token.json", policy="presence_only",
+        root="config", pattern="microsoft_tokens.json", policy="presence_only",
         expect="microsoft", writer="accounts/account_manager.py",
     ),
     SourceSpec(

@@ -19,11 +19,22 @@
       "failed": "{{store}} のサインインに失敗しました"
     },
     "hints": {
-      "itch": "itch.io でもう一度パスワードの入力を求められます。API キーが表示されていない場合は「Generate new API key」を押してください。"
+      "itch": "itch.io でもう一度パスワードの入力を求められます。API キーが表示されていない場合は「Generate new API key」を押してください。",
+      "microsoft": "「アクセスを許可」を押す"
+    },
+    "microsoft": {
+      "code": "コード",
+      "reopen": "再度開く"
     },
     "errors": {
       "networkTitle": "インターネット接続がありません",
-      "networkBody": "Wi-Fi に接続してからもう一度お試しください。"
+      "networkBody": "Wi-Fi に接続してからもう一度お試しください。",
+      "codeExpired": "コードの期限切れ",
+      "accessDenied": "拒否されました",
+      "noXboxProfile": "Xbox プロフィールなし",
+      "childAccount": "子供用アカウント",
+      "regionUnavailable": "地域が非対応",
+      "clientRejected": "Unifideck を更新"
     }
   },
   "storage": {
@@ -1065,10 +1076,16 @@
     "toggleLabel": "所有済みのゲームを表示",
     "toggleDescription": "他のストアで所有しているゲームの Steam ストアページに印を付けます（ゲーミングモード）。",
     "tagOwned": "所有済み",
-    "tagCloud": "クラウド",
+    "tagGamePass": "Game Pass",
     "messageOwned": "このゲームは次のストアで所有済みです:",
-    "messageCloud": "Xbox Cloud Gaming でプレイ可能",
+    "messageGamePass": "Game Pass に含まれています",
     "installed": "インストール済み",
+    "platformPc": "PC",
+    "platformConsole": "コンソール",
+    "platformPcConsole": "PC + コンソール",
+    "platformPlayAnywhere": "Play Anywhere",
+    "noteGold": "Gold",
+    "noteCloud": "クラウド",
     "via": "Unifideck 経由"
   },
   "reconcile": {

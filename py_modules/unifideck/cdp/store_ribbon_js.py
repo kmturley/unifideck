@@ -64,6 +64,9 @@ _RIBBON_FN_JS = r"""(function (DATA) {
     '.ud-own-logo{width:16px;height:16px;flex:none}',
     '.ud-own-chip.ud-inst .ud-own-logo{color:#a1cd44}',
     '.ud-own-detail{color:#8f98a0}',
+    // A bullet before every note, so "Xbox, Play Anywhere, Cloud" read as
+    // separate facts. The CSS escape keeps this script ASCII.
+    '.ud-own-detail::before{content:"\\2022";margin-inline-end:6px;color:#dcdedf;font-weight:700}',
     '.ud-own-via{margin-inline-start:auto;font-size:12px;color:#8f98a0}',
     '.ud-own-row.ud-cloud .ud-own-tag,.ud-own-ovl.ud-cloud .ud-own-tag{background:#67707b;color:#fff}',
     '.ud-own-row.ud-cloud .ud-own-msg{color:#c6d4df}',
@@ -145,6 +148,9 @@ _RIBBON_FN_JS = r"""(function (DATA) {
       else if (c.label) chip.appendChild(el('span', 'ud-own-dot'));
       if (c.label) chip.appendChild(el('span', null, c.label));
       if (c.detail) chip.appendChild(el('span', 'ud-own-detail', c.detail));
+      for (var n = 0; n < (c.notes || []).length; n++) {
+        chip.appendChild(el('span', 'ud-own-detail', String(c.notes[n])));
+      }
       if (c.installed && DATA.installed) chip.appendChild(el('span', 'ud-own-detail', DATA.installed));
       return chip;
     };

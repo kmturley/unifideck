@@ -30,6 +30,7 @@ class StoreOwnershipRPCMixin:
 
     cache: Any
     config: Any
+    services: Any
     sync_service: Any
 
     async def show_store_ownership(
@@ -80,7 +81,26 @@ class StoreOwnershipRPCMixin:
         except Exception as exc:
             logger.warning("[StoreOwnership] get_all_games failed: %s", exc)
             return []
-        return find_owned_copies(games, getattr(self, "cache", None), appid)
+        return find_owned_copies(
+            games, getattr(self, "cache", None), appid, self._purchase_indexes(),
+        )
+
+    def _purchase_indexes(self) -> dict[str, Any]:
+        """Authenticated purchase lists (Xbox), and a nudge if they are stale.
+
+        A missing or broken ownership service means today's behaviour: the
+        Xbox line is the neutral CLOUD one, never OWNED.
+        """
+        service = getattr(getattr(self, "services", None), "microsoft_ownership", None)
+        if service is None:
+            return {}
+        try:
+            indexes = service.purchase_indexes()
+            service.nudge()
+        except Exception as exc:
+            logger.warning("[StoreOwnership] purchase index unavailable: %s", exc)
+            return {}
+        return indexes if isinstance(indexes, dict) else {}
 
     async def _draw(
         self, appid: int, copies: list[OwnedCopy], strings: RibbonStrings,

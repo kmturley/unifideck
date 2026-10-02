@@ -19,11 +19,22 @@
       "failed": "{{store}} 로그인 실패"
     },
     "hints": {
-      "itch": "itch.io에서 비밀번호를 다시 묻습니다. API 키가 표시되지 않으면 “Generate new API key”를 누르세요."
+      "itch": "itch.io에서 비밀번호를 다시 묻습니다. API 키가 표시되지 않으면 “Generate new API key”를 누르세요.",
+      "microsoft": "'액세스 허용'을 누르세요"
+    },
+    "microsoft": {
+      "code": "코드",
+      "reopen": "다시 열기"
     },
     "errors": {
       "networkTitle": "인터넷 연결 없음",
-      "networkBody": "Wi-Fi에 연결한 후 다시 시도하세요."
+      "networkBody": "Wi-Fi에 연결한 후 다시 시도하세요.",
+      "codeExpired": "코드 만료",
+      "accessDenied": "로그인 거부됨",
+      "noXboxProfile": "Xbox 프로필 없음",
+      "childAccount": "자녀 계정",
+      "regionUnavailable": "지원되지 않는 지역",
+      "clientRejected": "Unifideck 업데이트"
     }
   },
   "storage": {
@@ -1065,10 +1076,16 @@
     "toggleLabel": "이미 보유한 게임 표시",
     "toggleDescription": "다른 스토어에서 보유한 게임의 Steam 상점 페이지에 표시합니다(게임 모드).",
     "tagOwned": "보유 중",
-    "tagCloud": "클라우드",
+    "tagGamePass": "Game Pass",
     "messageOwned": "이미 다음 스토어에서 이 게임을 보유하고 있습니다:",
-    "messageCloud": "Xbox Cloud Gaming으로 플레이 가능",
+    "messageGamePass": "Game Pass에 포함",
     "installed": "설치됨",
+    "platformPc": "PC",
+    "platformConsole": "콘솔",
+    "platformPcConsole": "PC + 콘솔",
+    "platformPlayAnywhere": "Play Anywhere",
+    "noteGold": "Gold",
+    "noteCloud": "클라우드",
     "via": "Unifideck 제공"
   },
   "reconcile": {

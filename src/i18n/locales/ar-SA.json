@@ -19,11 +19,22 @@
       "failed": "فشل تسجيل الدخول إلى {{store}}"
     },
     "hints": {
-      "itch": "سيطلب itch.io كلمة المرور مرة أخرى. إذا لم يظهر أي مفتاح API، فاضغط على “Generate new API key”."
+      "itch": "سيطلب itch.io كلمة المرور مرة أخرى. إذا لم يظهر أي مفتاح API، فاضغط على “Generate new API key”.",
+      "microsoft": "اضغط السماح بالوصول"
+    },
+    "microsoft": {
+      "code": "الرمز",
+      "reopen": "إعادة الفتح"
     },
     "errors": {
       "networkTitle": "لا يوجد اتصال بالإنترنت",
-      "networkBody": "اتصل بشبكة Wi-Fi وحاول مرة أخرى."
+      "networkBody": "اتصل بشبكة Wi-Fi وحاول مرة أخرى.",
+      "codeExpired": "انتهى الرمز",
+      "accessDenied": "رُفض تسجيل الدخول",
+      "noXboxProfile": "لا يوجد ملف Xbox",
+      "childAccount": "حساب طفل",
+      "regionUnavailable": "المنطقة غير مدعومة",
+      "clientRejected": "حدّث Unifideck"
     }
   },
   "storage": {
@@ -1065,10 +1076,16 @@
     "toggleLabel": "إظهار الألعاب التي تملكها بالفعل",
     "toggleDescription": "يضع علامة على صفحات متجر Steam للألعاب التي تملكها في متاجر أخرى (وضع الألعاب).",
     "tagOwned": "مملوكة",
-    "tagCloud": "سحابي",
+    "tagGamePass": "Game Pass",
     "messageOwned": "أنت تملك هذه اللعبة بالفعل على:",
-    "messageCloud": "قابلة للعب عبر Xbox Cloud Gaming",
+    "messageGamePass": "متاح ضمن Game Pass",
     "installed": "مثبتة",
+    "platformPc": "PC",
+    "platformConsole": "جهاز الألعاب",
+    "platformPcConsole": "PC + جهاز الألعاب",
+    "platformPlayAnywhere": "Play Anywhere",
+    "noteGold": "Gold",
+    "noteCloud": "سحابي",
     "via": "عبر Unifideck"
   },
   "reconcile": {

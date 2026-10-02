@@ -846,8 +846,11 @@
     "microsoftStore": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["client_id", "token_file", "auth_url", "token_url"],
+      "required": ["client_id", "token_file", "token_url"],
       "properties": {
+        "auth_flow": {
+          "enum": ["device_code", "browser_redirect"]
+        },
         "client_id": {
           "$ref": "#/$defs/nonEmptyString"
         },
@@ -856,6 +859,40 @@
         },
         "scope": {
           "$ref": "#/$defs/nonEmptyString"
+        },
+        "devicecode_url": {
+          "$ref": "#/$defs/httpsUrl"
+        },
+        "marketplace_relying_party": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "legacy_browser": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "client_id": {
+              "$ref": "#/$defs/nonEmptyString"
+            },
+            "scope": {
+              "$ref": "#/$defs/nonEmptyString"
+            },
+            "auth_url": {
+              "$ref": "#/$defs/httpsUrl"
+            },
+            "token_url": {
+              "$ref": "#/$defs/httpsUrl"
+            },
+            "redirect_uri": {
+              "$ref": "#/$defs/httpsUrl"
+            },
+            "allowed_redirect_uris": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/httpsUrl"
+              },
+              "minItems": 1
+            }
+          }
         },
         "auth_url": {
           "$ref": "#/$defs/httpsUrl"

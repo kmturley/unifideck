@@ -19,11 +19,22 @@
       "failed": "Aanmelden bij {{store}} mislukt"
     },
     "hints": {
-      "itch": "itch.io vraagt opnieuw om je wachtwoord. Staat er geen API-sleutel, druk dan op ‘Generate new API key’."
+      "itch": "itch.io vraagt opnieuw om je wachtwoord. Staat er geen API-sleutel, druk dan op ‘Generate new API key’.",
+      "microsoft": "Toegang toestaan"
+    },
+    "microsoft": {
+      "code": "Code",
+      "reopen": "Opnieuw openen"
     },
     "errors": {
       "networkTitle": "Geen internetverbinding",
-      "networkBody": "Maak verbinding met wifi en probeer het opnieuw."
+      "networkBody": "Maak verbinding met wifi en probeer het opnieuw.",
+      "codeExpired": "Code verlopen",
+      "accessDenied": "Geweigerd",
+      "noXboxProfile": "Geen Xbox-profiel",
+      "childAccount": "Kinderaccount",
+      "regionUnavailable": "Regio uitgesloten",
+      "clientRejected": "Werk Unifideck bij"
     }
   },
   "storage": {
@@ -1065,10 +1076,16 @@
     "toggleLabel": "Games tonen die je al hebt",
     "toggleDescription": "Markeert Steam-winkelpagina's van games die je in andere winkels hebt (gamemodus).",
     "tagOwned": "In bezit",
-    "tagCloud": "Cloud",
+    "tagGamePass": "Game Pass",
     "messageOwned": "Je hebt deze game al op:",
-    "messageCloud": "Speelbaar via Xbox Cloud Gaming",
+    "messageGamePass": "Inbegrepen bij Game Pass",
     "installed": "Geïnstalleerd",
+    "platformPc": "PC",
+    "platformConsole": "Console",
+    "platformPcConsole": "PC + Console",
+    "platformPlayAnywhere": "Play Anywhere",
+    "noteGold": "Gold",
+    "noteCloud": "Cloud",
     "via": "door Unifideck"
   },
   "reconcile": {

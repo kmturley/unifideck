@@ -501,6 +501,9 @@ SHARED_HELPERS: dict[str, str] = {
     # constant from the first minute.
     "dir_allocated_bytes": "stores/shared/installed_size.py",
     "_rebuild_auth_after_injection": "stores/shared/browser_auth_rebuild.py",
+    # The sign-in URL file the launcher opens. Promoted from AuthOrchestrator
+    # when the Microsoft device-code flow became its second writer.
+    "write_url_file_atomically": "auth/url_file.py",
     "rsync_clone": "stores/shared/prefix_clone.py",
     "write_marker": "stores/shared/prefix_clone.py",
     "read_cli_user_json": "stores/shared/cli_credentials.py",

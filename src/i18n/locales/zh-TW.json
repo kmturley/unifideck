@@ -19,11 +19,22 @@
       "failed": "{{store}} 登入失敗"
     },
     "hints": {
-      "itch": "itch.io 會再次要求輸入密碼。如果沒有列出 API 金鑰，請點按「Generate new API key」。"
+      "itch": "itch.io 會再次要求輸入密碼。如果沒有列出 API 金鑰，請點按「Generate new API key」。",
+      "microsoft": "按「允許存取」"
+    },
+    "microsoft": {
+      "code": "代碼",
+      "reopen": "重新開啟"
     },
     "errors": {
       "networkTitle": "無網路連線",
-      "networkBody": "請連上 Wi-Fi 後重試。"
+      "networkBody": "請連上 Wi-Fi 後重試。",
+      "codeExpired": "代碼已過期",
+      "accessDenied": "登入遭拒",
+      "noXboxProfile": "無 Xbox 個人檔案",
+      "childAccount": "兒童帳戶",
+      "regionUnavailable": "地區不支援",
+      "clientRejected": "請更新 Unifideck"
     }
   },
   "storage": {
@@ -644,10 +655,16 @@
     "toggleLabel": "標記您已擁有的遊戲",
     "toggleDescription": "在 Steam 商店頁面上標記您在其他商店已擁有的遊戲（遊戲模式）。",
     "tagOwned": "已擁有",
-    "tagCloud": "雲端",
+    "tagGamePass": "Game Pass",
     "messageOwned": "您已在以下商店擁有此遊戲：",
-    "messageCloud": "可透過 Xbox 雲端遊戲遊玩",
+    "messageGamePass": "包含在 Game Pass 中",
     "installed": "已安裝",
+    "platformPc": "PC",
+    "platformConsole": "主機",
+    "platformPcConsole": "PC + 主機",
+    "platformPlayAnywhere": "Play Anywhere",
+    "noteGold": "Gold",
+    "noteCloud": "雲端",
     "via": "來自 Unifideck"
   },
   "installLanguageModal": {
