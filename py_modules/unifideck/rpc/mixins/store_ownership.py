@@ -1,7 +1,7 @@
 """StoreOwnershipRPCMixin: the Steam Store "already owned elsewhere" ribbon.
 
 One RPC, called by ``src/lib/steam-bridge/store-ownership-ribbon.ts`` each
-time the Gaming Mode store finishes loading an app page. It answers "does
+time the Gaming Mode store starts and finishes loading an app page. It answers "does
 the user already have this game on another store?" from the live library
 and, only when the answer is yes, draws the ribbon into the store page over
 CDP. Every other store page costs one in-memory join and no CDP traffic.
@@ -49,7 +49,8 @@ class StoreOwnershipRPCMixin:
             ``{"shown", "reason", "stores"}``. ``reason`` is ``bad_appid``,
             ``not_owned`` (returned before any CDP work), ``bad_strings``,
             or the draw outcome: ``shown``, ``no_target``,
-            ``cdp_unavailable``, ``eval_failed``. Never raises.
+            ``stale_document``, ``cdp_unavailable``, ``eval_failed``.
+            Never raises.
         """
         try:
             appid = parse_steam_app_id(steam_app_id)

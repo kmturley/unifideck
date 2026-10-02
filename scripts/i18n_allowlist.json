@@ -208,7 +208,7 @@
     "locales": ["de-DE", "fr-FR", "nl-NL"],
     "reason": "Label before the Microsoft sign-in code in the QAM. German, French and Dutch all use the word 'Code'."
   },
-  "storeOwnership.tagGamePass": {
+  "storeOwnership.messageGamePass": {
     "locales": "*",
     "reason": "Brand name (Xbox Game Pass), unchanged on Microsoft's own localized pages."
   }

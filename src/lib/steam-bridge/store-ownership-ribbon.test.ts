@@ -2,9 +2,9 @@
 /**
  * Store-ownership ribbon detection: when the module calls the backend, and
  * when it must not. Steam's store browser is faked with the shape verified
- * on-device: `FinishedRequestCallbacks` is a getter returning a callback
- * list whose `Register` hands back `{ Unregister }`, and the browser object
- * is created lazily.
+ * on-device: `FinishedRequestCallbacks` and `StartLoadingCallbacks` are
+ * getters returning callback lists whose `Register` hands back
+ * `{ Unregister }`, and the browser object is created lazily.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { envelope } from "../../test-support/rpc-envelope";
@@ -31,32 +31,54 @@ import {
 } from "./store-ownership-ribbon";
 import { STORE_OWNERSHIP_ENABLED_KEY, setStoreOwnershipEnabled } from "../store-ownership-setting";
 
-type Cb = (url: string, title: string) => void;
+type Cb = (url: string, extra: unknown) => void;
 
-function fakeBrowser(url = "https://store.steampowered.com/") {
+function callbackList() {
   const callbacks: Cb[] = [];
   const unregister = vi.fn();
-  const browser = {
-    m_URL: url,
-    get FinishedRequestCallbacks() {
+  const list = {
+    Register: (cb: Cb) => {
+      callbacks.push(cb);
       return {
-        Register: (cb: Cb) => {
-          callbacks.push(cb);
-          return {
-            Unregister: () => {
-              unregister();
-              callbacks.splice(callbacks.indexOf(cb), 1);
-            },
-          };
+        Unregister: () => {
+          unregister();
+          callbacks.splice(callbacks.indexOf(cb), 1);
         },
       };
     },
   };
+  return { list, callbacks, unregister };
+}
+
+/** `startLoading: false` is a Steam build without `StartLoadingCallbacks`. */
+function fakeBrowser(url = "https://store.steampowered.com/", { startLoading = true } = {}) {
+  const finished = callbackList();
+  const starting = callbackList();
+  const browser: { m_URL: string } = {
+    m_URL: url,
+    get FinishedRequestCallbacks() {
+      return finished.list;
+    },
+  } as { m_URL: string };
+  if (startLoading) {
+    Object.defineProperty(browser, "StartLoadingCallbacks", { get: () => starting.list });
+  }
   const fire = (next: string) => {
     browser.m_URL = next;
-    callbacks.slice().forEach((cb) => cb(next, "title"));
+    finished.callbacks.slice().forEach((cb) => cb(next, "title"));
   };
-  return { browser, callbacks, unregister, fire };
+  const start = (next: string) => {
+    browser.m_URL = next;
+    starting.callbacks.slice().forEach((cb) => cb(next, false));
+  };
+  return {
+    browser,
+    callbacks: finished.callbacks,
+    starting: starting.callbacks,
+    unregister: finished.unregister,
+    fire,
+    start,
+  };
 }
 
 function fakeWindow(storeBrowser?: unknown, pathname = "/library/home") {
@@ -113,7 +135,7 @@ describe("buildRibbonStrings", () => {
     const s = buildRibbonStrings();
     expect(s.tag_owned).toBe("t:storeOwnership.tagOwned");
     expect(s.message_cloud).toBe("t:storeOwnership.messageGamePass");
-    expect(s.tag_cloud).toBe("t:storeOwnership.tagGamePass");
+    expect(s.tag_cloud).toBe("t:storeOwnership.tagStreamable");
     expect(s.dir).toBe("ltr");
     expect(s.store_labels.gog).toBe("GOG");
     expect(s.store_labels.microsoft).toBe("Xbox");
@@ -247,11 +269,65 @@ describe("startStoreOwnershipRibbon", () => {
 
     const { browser } = fakeBrowser(APP_URL);
     routerHolder.window = fakeWindow(browser, "/steamweb").win;
-    await vi.advanceTimersByTimeAsync(1_000);
+    // The next once-a-second check, plus the draw debounce.
+    await vi.advanceTimersByTimeAsync(1_500);
 
     expect(callMock).toHaveBeenCalledTimes(1);
     expect(callMock.mock.calls[0][1]).toBe(257350);
     expect(warn).not.toHaveBeenCalled();
+    dispose();
+  });
+
+  it("re-attaches when Steam rebuilds its Gaming Mode window", async () => {
+    // Regression (2026-10-02): after the post-sync Steam UI restart the
+    // ribbon held the old window and store browser, and was off for every
+    // store page until a plugin reload.
+    const first = fakeBrowser();
+    const oldWindow = fakeWindow(first.browser);
+    routerHolder.window = oldWindow.win;
+    const dispose = startStoreOwnershipRibbon();
+
+    const second = fakeBrowser();
+    const newWindow = fakeWindow(second.browser);
+    routerHolder.window = newWindow.win;
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    expect(first.unregister).toHaveBeenCalledTimes(1);
+    expect(oldWindow.unlisten).toHaveBeenCalledTimes(1);
+    expect(newWindow.listeners).toHaveLength(1);
+    expect(second.callbacks).toHaveLength(1);
+
+    second.fire(APP_URL);
+    await vi.advanceTimersByTimeAsync(300);
+    expect(callMock).toHaveBeenCalledTimes(1);
+    dispose();
+  });
+
+  it("draws as soon as a page starts loading", async () => {
+    // Measured on a never-visited page: loading starts at ~0.9 s, the
+    // page's blocks exist at ~2 s, and the finished signal comes at ~7 s.
+    const fake = fakeBrowser();
+    routerHolder.window = fakeWindow(fake.browser).win;
+    const dispose = startStoreOwnershipRibbon();
+
+    fake.start(APP_URL);
+    await vi.advanceTimersByTimeAsync(300);
+
+    expect(callMock).toHaveBeenCalledTimes(1);
+    expect(callMock.mock.calls[0][1]).toBe(257350);
+    dispose();
+    expect(fake.starting).toHaveLength(0);
+  });
+
+  it("still works on a Steam build without the start-loading signal", async () => {
+    const fake = fakeBrowser(undefined, { startLoading: false });
+    routerHolder.window = fakeWindow(fake.browser).win;
+    const dispose = startStoreOwnershipRibbon();
+
+    fake.fire(APP_URL);
+    await vi.advanceTimersByTimeAsync(300);
+
+    expect(callMock).toHaveBeenCalledTimes(1);
     dispose();
   });
 

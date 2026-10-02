@@ -16,8 +16,8 @@ from unifideck.rpc.mixins._store_ownership_payload import (
     RibbonStrings,
     build_ribbon_payload,
     edition_detail,
-    purchase_notes,
     parse_steam_app_id,
+    purchase_notes,
     read_steam_name,
     sanitize_ribbon_strings,
 )
@@ -127,7 +127,7 @@ def test_purchases_only_payload() -> None:
     payload = build_ribbon_payload(257350, copies, _strings(), "Baldur's Gate II: Enhanced Edition")
 
     assert payload["appid"] == 257350
-    assert payload["overlay"] == {"tag": "Owned", "text": "Amazon Games · GOG", "cloud": False}
+    assert payload["overlay"] == {"tag": "Owned", "text": "Amazon Games · GOG"}
     assert payload["sections"] == [{
         "kind": "owned",
         "tag": "Owned",
@@ -146,9 +146,10 @@ def test_subscription_only_payload_never_says_owned() -> None:
 
     payload = build_ribbon_payload(1091500, copies, _strings(), "Cyberpunk 2077")
 
-    assert payload["overlay"] == {
-        "tag": "Cloud", "text": "Playable via Xbox Cloud Gaming", "cloud": True,
-    }
+    # The capsule strip is narrow in Gaming Mode: tag + the service name,
+    # never a sentence (one was cut to "Included with Game P…"), and never
+    # the bare store name, which read as owned.
+    assert payload["overlay"] == {"tag": "Cloud", "text": "Playable via Xbox Cloud Gaming"}
     assert [s["kind"] for s in payload["sections"]] == ["cloud"]
     assert payload["sections"][0]["chips"] == []  # same title → nothing to add
 

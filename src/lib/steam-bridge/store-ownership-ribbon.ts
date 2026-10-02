@@ -8,13 +8,14 @@
  * only then, draws the ribbon into the page over CDP
  * (`py_modules/unifideck/cdp/store_ribbon.py`).
  *
- * Detection uses Steam's own store-browser callback list,
- * `GamepadUIMainWindowInstance.m_StoreBrowser.FinishedRequestCallbacks`,
- * with no CDP and no polling. Verified on-device (2026-10-02): it fires with
- * `(url, title)` for steam://openurl navigations, in-page link clicks and
- * Back, and the browser object survives leaving the store. It is created
- * lazily, the first time the store opens, so registration is retried on
- * every route change into `/steamweb`.
+ * Detection uses Steam's own store-browser callback lists,
+ * `GamepadUIMainWindowInstance.m_StoreBrowser.StartLoadingCallbacks` and
+ * `.FinishedRequestCallbacks`, with no CDP. Verified on-device (2026-10-02):
+ * both fire with the URL first for steam://openurl navigations, in-page link
+ * clicks and Back. On a page never visited, finished came up to 6 s after
+ * loading started, while the page's blocks existed after ~2 s. The browser
+ * object is created lazily and Steam rebuilds it (and its window) after a UI
+ * restart, so a once-a-second check re-attaches whenever either changes.
  *
  * Back/forward loads a fresh document, so every finished request is sent
  * and none is deduplicated by URL.
@@ -45,11 +46,11 @@ const DEBOUNCE_MS = 300;
 /** The store BrowserView is created lazily after the route changes. */
 const RESOLVE_RETRIES = 8;
 const RESOLVE_INTERVAL_MS = 250;
-/** After a Steam UI restart Decky can load the plugin before Steam has built
- *  its Gaming Mode window. Wait for it (60 s) instead of giving up, or the
- *  ribbon stays off for every store until the plugin reloads. */
-const WINDOW_WAIT_TRIES = 120;
-const WINDOW_WAIT_INTERVAL_MS = 500;
+/** How often an active ribbon re-checks that it is attached (see
+ *  `ensureAttached`). */
+const ATTACH_CHECK_MS = 1000;
+/** Warn once when no Gaming Mode window appears for this long (Desktop Mode). */
+const NO_WINDOW_WARN_MS = 60 * 1000;
 const LOG = "[Unifideck] Store ownership ribbon:";
 
 /** Translated ribbon text. The page has no i18next, so it travels with the call. */
@@ -91,8 +92,9 @@ export function buildRibbonStrings(): RibbonStrings {
   }
   return {
     tag_owned: t("storeOwnership.tagOwned"),
-    // The grey line is the Xbox titles playable but not owned: Game Pass.
-    tag_cloud: t("storeOwnership.tagGamePass"),
+    // The second line is the Xbox titles playable but not owned: Game Pass,
+    // which Unifideck plays by streaming.
+    tag_cloud: t("storeOwnership.tagStreamable"),
     message_owned: t("storeOwnership.messageOwned"),
     message_cloud: t("storeOwnership.messageGamePass"),
     installed: t("storeOwnership.installed"),
@@ -138,12 +140,14 @@ export function startStoreOwnershipRibbon(): () => void {
   };
 
   let active = false;
+  let startedAt = 0;
+  let win: GamepadMainWindowInternals | undefined;
   let browser: SteamStoreBrowser | null = null;
-  let registration: { Unregister(): void } | null = null;
+  let registrations: Array<{ Unregister(): void }> = [];
   let unlisten: (() => void) | null = null;
   let debounce: ReturnType<typeof setTimeout> | undefined;
   let retry: ReturnType<typeof setTimeout> | undefined;
-  let windowWait: ReturnType<typeof setTimeout> | undefined;
+  let watchdog: ReturnType<typeof setInterval> | undefined;
 
   const draw = async (appId: number) => {
     try {
@@ -167,7 +171,7 @@ export function startStoreOwnershipRibbon(): () => void {
     }
   };
 
-  const onFinished = (url: unknown) => {
+  const onNavigate = (url: unknown) => {
     if (!active) return;
     clearTimeout(debounce);
     const appId = parseStoreAppId(url);
@@ -175,45 +179,44 @@ export function startStoreOwnershipRibbon(): () => void {
     debounce = setTimeout(() => void draw(appId), DEBOUNCE_MS);
   };
 
+  const unregister = () => {
+    for (const registration of registrations) registration.Unregister();
+    registrations = [];
+    browser = null;
+  };
+
   /** True once there is nothing left to retry (registered, or unusable). */
   const ensureRegistered = (): boolean => {
-    const win = gamepadWindow();
-    if (!win) {
-      warnOnce(
-        "window",
-        "Router.WindowStore.GamepadUIMainWindowInstance not found (desktop / non-Big-Picture UI). The ribbon only works in Gaming Mode",
-      );
-      return true;
-    }
-    const next = win.m_StoreBrowser;
+    const next = win?.m_StoreBrowser;
     if (!next) return false;
     if (next === browser) return true;
-    registration?.Unregister();
-    registration = null;
+    unregister();
     browser = next;
-    const callbacks = next.FinishedRequestCallbacks;
-    if (typeof callbacks?.Register !== "function") {
+    const finished = next.FinishedRequestCallbacks;
+    if (typeof finished?.Register !== "function") {
       warnOnce(
         "register",
         "GamepadUIMainWindowInstance.m_StoreBrowser.FinishedRequestCallbacks has no Register(). Steam changed its store browser, so the ribbon is disabled",
       );
       return true;
     }
-    registration = callbacks.Register((url) => onFinished(url));
-    onFinished(next.m_URL); // a store page already open before we registered
+    registrations.push(finished.Register((url) => onNavigate(url)));
+    // The earlier signal: drawing as the page starts loading lets the
+    // backend's work overlap the page's own render; the page script waits
+    // for its anchors, and the backend retries while the target still holds
+    // the previous page. Finished stays as the backstop.
+    const starting = next.StartLoadingCallbacks;
+    if (typeof starting?.Register === "function") {
+      registrations.push(starting.Register((url) => onNavigate(url)));
+    }
+    onNavigate(next.m_URL); // a store page already open before we registered
     return true;
   };
 
   const resolveSoon = (attempt = 0) => {
     clearTimeout(retry);
     if (!active || ensureRegistered()) return;
-    if (attempt + 1 >= RESOLVE_RETRIES) {
-      warnOnce(
-        "browser",
-        "GamepadUIMainWindowInstance.m_StoreBrowser not found after opening the Store. The ribbon is off until the next Store visit",
-      );
-      return;
-    }
+    if (attempt + 1 >= RESOLVE_RETRIES) return; // the watchdog keeps trying
     retry = setTimeout(() => resolveSoon(attempt + 1), RESOLVE_INTERVAL_MS);
   };
 
@@ -221,63 +224,59 @@ export function startStoreOwnershipRibbon(): () => void {
     if (pathnameOf(update).startsWith(STORE_ROUTE)) resolveSoon();
   };
 
-  /** Listen for Store visits on the Gaming Mode window, and register now
-   *  if a Store page is already open. */
-  const attach = (win: GamepadMainWindowInternals) => {
-    const history = win.m_history;
-    if (typeof history?.listen === "function") {
-      unlisten = history.listen(onRoute) ?? null;
-    } else {
-      warnOnce(
-        "history",
-        "GamepadUIMainWindowInstance.m_history.listen not found. The ribbon can only attach to a Store that was already open when the plugin loaded",
-      );
-    }
-    if (
-      !ensureRegistered() &&
-      pathnameOf(history?.location).startsWith(STORE_ROUTE)
-    ) {
-      resolveSoon();
-    }
-  };
-
-  const waitForWindow = (attempt = 0) => {
-    clearTimeout(windowWait);
+  /** Follow Steam's current Gaming Mode window: listen to its history and
+   *  register on its store browser. Runs on activation and then every
+   *  {@link ATTACH_CHECK_MS}, because Steam rebuilds the window and the
+   *  store browser after a UI restart and a reference taken once goes stale
+   *  without any error (measured 2026-10-02: the ribbon was off for every
+   *  store after the post-sync restart). Costs two property reads. */
+  const ensureAttached = () => {
     if (!active) return;
-    const win = gamepadWindow();
-    if (win) {
-      attach(win);
+    const current = gamepadWindow();
+    if (!current) {
+      if (Date.now() - startedAt >= NO_WINDOW_WARN_MS) {
+        warnOnce(
+          "window",
+          "Router.WindowStore.GamepadUIMainWindowInstance not found (desktop / non-Big-Picture UI). The ribbon only works in Gaming Mode",
+        );
+      }
       return;
     }
-    if (attempt + 1 >= WINDOW_WAIT_TRIES) {
-      warnOnce(
-        "window",
-        "Router.WindowStore.GamepadUIMainWindowInstance not found (desktop / non-Big-Picture UI). The ribbon only works in Gaming Mode",
-      );
-      return;
+    if (current !== win) {
+      unlisten?.();
+      unlisten = null;
+      unregister();
+      win = current;
+      const history = current.m_history;
+      if (typeof history?.listen === "function") {
+        unlisten = history.listen(onRoute) ?? null;
+      } else {
+        warnOnce(
+          "history",
+          "GamepadUIMainWindowInstance.m_history.listen not found. The ribbon attaches to the Store only on its once-a-second check",
+        );
+      }
     }
-    windowWait = setTimeout(
-      () => waitForWindow(attempt + 1),
-      WINDOW_WAIT_INTERVAL_MS,
-    );
+    ensureRegistered();
   };
 
   const activate = () => {
     if (active) return;
     active = true;
-    waitForWindow();
+    startedAt = Date.now();
+    ensureAttached();
+    watchdog = setInterval(ensureAttached, ATTACH_CHECK_MS);
   };
 
   const deactivate = () => {
     active = false;
     clearTimeout(debounce);
     clearTimeout(retry);
-    clearTimeout(windowWait);
-    registration?.Unregister();
-    registration = null;
-    browser = null;
+    clearInterval(watchdog);
+    unregister();
     unlisten?.();
     unlisten = null;
+    win = undefined;
   };
 
   const onSetting = (e: Event) => {

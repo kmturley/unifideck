@@ -129,7 +129,7 @@ def build_ribbon_payload(
 
     Purchases and subscription rows are separate sections: a subscription
     row is "playable", never "owned". The overlay names the purchase stores
-    when there are any, otherwise it carries the subscription line.
+    when there are any, otherwise the subscription service.
     """
     owned = [c for c in copies if not c.subscription]
     cloud = [c for c in copies if c.subscription]
@@ -207,7 +207,11 @@ def _cloud_chips(
 
 
 def _overlay(owned: list[OwnedCopy], strings: RibbonStrings) -> dict[str, Any]:
+    """The tag plus a few words: the capsule strip is narrow in Gaming Mode
+    (a sentence was cut to "Included with Game P…"). Purchases name their
+    stores; the subscription line names the service, "Xbox Game Pass",
+    because "Xbox" alone read as owned."""
     if owned:
         labels = [strings.store_labels.get(c.store) or c.store for c in owned]
-        return {"tag": strings.tag_owned, "text": " · ".join(labels), "cloud": False}
-    return {"tag": strings.tag_cloud, "text": strings.message_cloud, "cloud": True}
+        return {"tag": strings.tag_owned, "text": " · ".join(labels)}
+    return {"tag": strings.tag_cloud, "text": strings.message_cloud}

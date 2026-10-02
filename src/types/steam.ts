@@ -166,7 +166,10 @@ export interface SteamCallbackList<TArgs extends unknown[]> {
  */
 export interface SteamStoreBrowser {
   m_URL?: string;
+  /** `(url, title)` when a page has finished loading. */
   readonly FinishedRequestCallbacks?: SteamCallbackList<[string, string]>;
+  /** `(url, bool)` when a new page starts loading, ~0.7 s earlier. */
+  readonly StartLoadingCallbacks?: SteamCallbackList<[string, boolean]>;
 }
 
 /** The gamepad router's history (react-router's history object). */

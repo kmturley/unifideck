@@ -216,10 +216,33 @@ def test_merge_keeps_matches_and_resets_stale_misses() -> None:
 
 
 def test_misses_are_retried_after_a_week() -> None:
-    entry = {"title": "X", "steam_appid": idx.STEAM_MISS, "steam_checked_at": 0}
+    entry = {"title": "X", "steam_appid": idx.STEAM_MISS, "steam_checked_at": 0,
+             "steam_search_rev": idx.STEAM_SEARCH_REVISION}
     assert idx.needs_steam_search(entry, now=idx.MISS_RETRY_SECONDS + 1)
     assert not idx.needs_steam_search(entry, now=10)
     assert not idx.needs_steam_search({"title": "", "steam_appid": 0})
+
+
+def test_a_miss_from_an_older_search_is_retried_at_once() -> None:
+    """Revision 2 strips "(PC)": "DOOM Eternal Standard Edition (PC)" was a
+    miss under 1 and must not wait a week for the better search."""
+    old = {"title": "DOOM Eternal Standard Edition (PC)", "steam_appid": idx.STEAM_MISS,
+           "steam_checked_at": 5}  # written before revisions existed
+    assert idx.needs_steam_search(old, now=10)
+    merged = idx.merge({"products": {"A": old}}, _owned(A=old["title"]), now=10)
+    assert idx.needs_steam_search(merged["products"]["A"], now=10)
+    assert not idx.needs_steam_search(
+        {"title": "Mapped", "steam_appid": 42, "steam_search_rev": 1}, now=10,
+    )
+
+
+async def test_a_search_records_its_revision(_no_steam: list[str]) -> None:
+    index = idx.merge(None, _owned(P="Not on Steam"), now=1)
+    await steam_resolve.resolve_pending(index, None, save=lambda: None)
+    entry = index["products"]["P"]
+    assert entry["steam_appid"] == idx.STEAM_MISS
+    assert entry["steam_search_rev"] == idx.STEAM_SEARCH_REVISION
+    assert not idx.needs_steam_search(entry, now=entry["steam_checked_at"] + 10)
 
 
 def test_an_index_in_an_unknown_shape_is_ignored() -> None:

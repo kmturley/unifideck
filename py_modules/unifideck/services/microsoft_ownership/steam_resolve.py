@@ -23,7 +23,7 @@ from unifideck.core.steam_appid_map import read_positive_steam_appid
 from unifideck.core.types.domain import Game
 from unifideck.steam.library import search_store
 
-from .index import STEAM_MISS, needs_steam_search
+from .index import STEAM_MISS, STEAM_SEARCH_REVISION, needs_steam_search
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +64,7 @@ async def resolve_pending(
         appid = await _steam_appid(entry["title"], config)
         entry["steam_appid"] = appid if appid > 0 else STEAM_MISS
         entry["steam_checked_at"] = time.time()
+        entry["steam_search_rev"] = STEAM_SEARCH_REVISION
         matched += appid > 0
         missed += appid <= 0
         if done % _SAVE_EVERY == 0:

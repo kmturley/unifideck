@@ -177,13 +177,13 @@ async def test_every_matching_page_is_drawn_into(monkeypatch: pytest.MonkeyPatch
             _target(url, tid="c"),
         ]
 
-    async def _inject(target: dict[str, Any], sources: list[str], **_: Any) -> bool:
-        assert sources == [build_ribbon_script(HOSTILE)]
+    async def _evaluate(target: dict[str, Any], source: str, **_: Any) -> tuple[bool, Any]:
+        assert source == build_ribbon_script(HOSTILE)
         drawn.append(target["id"])
-        return True
+        return True, "installed"
 
     monkeypatch.setattr(store_ribbon, "list_page_targets", _list)
-    monkeypatch.setattr(store_ribbon, "inject_into_target", _inject)
+    monkeypatch.setattr(store_ribbon, "evaluate_in_target", _evaluate)
 
     outcome = await inject_store_ribbon(8080, APP, HOSTILE)
 
@@ -195,12 +195,92 @@ async def test_failed_evaluations_are_reported(monkeypatch: pytest.MonkeyPatch) 
     async def _list(port: int, **_: Any) -> list[dict[str, Any]]:
         return [_target("https://store.steampowered.com/app/257350/")]
 
-    async def _inject(target: dict[str, Any], sources: list[str], **_: Any) -> bool:
-        return False
+    async def _evaluate(target: dict[str, Any], source: str, **_: Any) -> tuple[bool, Any]:
+        return False, None
 
     monkeypatch.setattr(store_ribbon, "list_page_targets", _list)
-    monkeypatch.setattr(store_ribbon, "inject_into_target", _inject)
+    monkeypatch.setattr(store_ribbon, "evaluate_in_target", _evaluate)
 
     outcome = await inject_store_ribbon(8080, APP, HOSTILE)
 
     assert outcome == RibbonInjectOutcome(shown=False, reason="eval_failed", targets=1)
+
+
+async def test_a_page_error_is_logged_with_its_message(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+) -> None:
+    async def _list(port: int, **_: Any) -> list[dict[str, Any]]:
+        return [_target("https://store.steampowered.com/app/257350/")]
+
+    async def _evaluate(target: dict[str, Any], source: str, **_: Any) -> tuple[bool, Any]:
+        return True, "error: boom"
+
+    monkeypatch.setattr(store_ribbon, "list_page_targets", _list)
+    monkeypatch.setattr(store_ribbon, "evaluate_in_target", _evaluate)
+    caplog.set_level(logging.WARNING, logger=store_ribbon.__name__)
+
+    outcome = await inject_store_ribbon(8080, APP, HOSTILE)
+
+    assert outcome == RibbonInjectOutcome(shown=False, reason="eval_failed", targets=1)
+    assert any("error: boom" in r.getMessage() for r in caplog.records)
+
+
+async def test_the_previous_document_is_retried_until_the_new_one_loads(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Measured on-device: drawing as a page starts loading can reach the
+    target while it still holds the previous page (new URL, old document)."""
+    answers = ["path-mismatch", "path-mismatch", "installed"]
+
+    async def _list(port: int, **_: Any) -> list[dict[str, Any]]:
+        return [_target("https://store.steampowered.com/app/257350/")]
+
+    async def _evaluate(target: dict[str, Any], source: str, **_: Any) -> tuple[bool, Any]:
+        return True, answers.pop(0)
+
+    async def _no_sleep(_: float) -> None:
+        return None
+
+    monkeypatch.setattr(store_ribbon, "list_page_targets", _list)
+    monkeypatch.setattr(store_ribbon, "evaluate_in_target", _evaluate)
+    monkeypatch.setattr(store_ribbon.asyncio, "sleep", _no_sleep)
+
+    outcome = await inject_store_ribbon(8080, APP, HOSTILE)
+
+    assert outcome == RibbonInjectOutcome(shown=True, reason="shown", targets=1)
+    assert answers == []
+
+
+async def test_only_stale_documents_give_up_after_the_retries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[str] = []
+
+    async def _list(port: int, **_: Any) -> list[dict[str, Any]]:
+        return [_target("https://store.steampowered.com/app/257350/")]
+
+    async def _evaluate(target: dict[str, Any], source: str, **_: Any) -> tuple[bool, Any]:
+        calls.append(target["id"])
+        return True, "path-mismatch"
+
+    async def _no_sleep(_: float) -> None:
+        return None
+
+    monkeypatch.setattr(store_ribbon, "list_page_targets", _list)
+    monkeypatch.setattr(store_ribbon, "evaluate_in_target", _evaluate)
+    monkeypatch.setattr(store_ribbon.asyncio, "sleep", _no_sleep)
+
+    outcome = await inject_store_ribbon(8080, APP, HOSTILE, attempts=4)
+
+    assert outcome == RibbonInjectOutcome(shown=False, reason="stale_document", targets=1)
+    assert len(calls) == 4
+
+
+def test_the_page_script_survives_an_early_evaluation() -> None:
+    """Drawing as a page starts loading can run before it has an <html>
+    element: the observer watches the document itself, and a half-built
+    instance is torn down so the next call is not kept as 'unchanged'."""
+    assert "observer.observe(document," in _RIBBON_FN_JS
+    assert "observe(document.documentElement" not in _RIBBON_FN_JS
+    catch = _RIBBON_FN_JS[_RIBBON_FN_JS.rindex("} catch (e) {"):]
+    assert "state.teardown()" in catch
