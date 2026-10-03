@@ -13,6 +13,8 @@ review flagged.
 """
 from __future__ import annotations
 
+import pytest
+
 from unifideck.utils.title_match import extract_edition_label
 
 
@@ -156,3 +158,16 @@ def test_unmatched_closing_bracket_does_not_strand_the_opener():
     )
     assert label == "Standard Edition (Windows)"
     assert label.count("(") == label.count(")")
+
+
+@pytest.mark.parametrize(("title", "label"), [
+    ("Hollow Knight: Voidheart Edition", "Voidheart Edition"),
+    ("The Outer Worlds: Spacer's Choice Edition", "Spacer's Choice Edition"),
+    ("PAYDAY 2: CRIMEWAVE EDITION", "CRIMEWAVE EDITION"),
+    ("Trine Enchanted Edition", "Enchanted Edition"),
+    ("Brigador: Up-Armored Edition", "Up-Armored Edition"),
+])
+def test_a_named_edition_keeps_its_qualifier(title: str, label: str) -> None:
+    """The stripper removes only the word "edition"; the label must still
+    name the edition, not read a bare "Edition"."""
+    assert extract_edition_label(title) == label

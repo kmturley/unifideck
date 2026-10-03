@@ -82,7 +82,8 @@ Infrastructure primitives. No store or service knowledge.
 | `paths.py`                      | Canonical path resolution                 |
 | `store_urls.py`                 | Per-store storefront/search URL builders  |
 | `cross_source_dedupe.py`        | Drops a title owned on two stores at once |
-| `game_grouping.py`              | Display-only: stamps `dedupe_group_id`/`edition_label` for the All Games grid's multi-store card grouping — never removes a shortcut |
+| `game_grouping.py`              | Display-only: stamps `dedupe_group_id`, `edition_label` and the owned Steam copy on each game, for the "Group duplicates" tabs and the game-page store switcher. Never removes a shortcut |
+| `game_identity.py`              | Which library rows and owned Steam apps are the same game (any version of it). One rule shared by `game_grouping.py` and the ownership ribbon's join |
 | `safe_delete.py`                | Guarded delete used by every sweep        |
 | `cleanup_sweeps.py`             | The blocking sweeps behind "delete all data" |
 | `marker_sweep.py`               | Install-dir ownership via `.unifideck*` markers |
@@ -90,7 +91,7 @@ Infrastructure primitives. No store or service knowledge.
 | `compat_bridge.py`              | Bridges our prefixes into `compatdata/` so Protontricks can see them; owns the signed/unsigned AppID pair |
 | `compat_tool_bridge.py`         | Resolves a compat-tool id to a Proton path |
 | `steam_appid_map.py`            | The one read of the shortcut → real-Steam-AppID cache that returns "an AppID or 0" |
-| `cross_store_ownership.py`      | Which non-Steam stores hold a given Steam AppID. The Steam Store ownership ribbon's join, built on demand from the live library plus authenticated purchase indexes (Xbox) |
+| `cross_store_ownership.py`      | Which non-Steam stores hold a given Steam AppID, any version of it (via `game_identity.py`). The Steam Store ownership ribbon's join, built on demand from the live library plus authenticated purchase indexes (Xbox) |
 | `store_capabilities.py`         | Per-store capability sets — the single source of truth behind the `get_store_infos` flags |
 | `io/async_file_ops.py`          | Async file read/write/remove              |
 | `io/safe_file_op.py`            | Atomic write with rollback                |

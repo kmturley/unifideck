@@ -1071,7 +1071,7 @@
     "enabled": "Collezioni abilitate",
     "disabled": "Collezioni disabilitate",
     "groupDuplicates": "Raggruppa duplicati",
-    "groupDuplicatesDescription": "Unisce le copie di un titolo provenienti da negozi diversi in un'unica scheda in Tutti i giochi, Ottimale per Deck e Installati. Disattivato per impostazione predefinita: la copia di ogni negozio viene mostrata separatamente."
+    "groupDuplicatesDescription": "Mostra un solo riquadro nella libreria per un gioco che possiedi su più store, incluse altre edizioni e la tua copia Steam. Un menu a tendina nella pagina del gioco passa da una copia all'altra."
   },
   "storeOwnership": {
     "settingsTitle": "NEGOZIO DI STEAM",

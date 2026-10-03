@@ -1071,7 +1071,7 @@
     "enabled": "Colecciones activadas",
     "disabled": "Colecciones desactivadas",
     "groupDuplicates": "Agrupar duplicados",
-    "groupDuplicatesDescription": "Combina las copias de un título de distintas tiendas en una sola miniatura en Todos los juegos, Ideal para Deck e Instalados. Desactivado de forma predeterminada: la copia de cada tienda se muestra por separado."
+    "groupDuplicatesDescription": "Muestra un único mosaico en la biblioteca para cada juego que tienes en varias tiendas, incluidas otras ediciones y tu copia de Steam. Un menú desplegable en la página del juego cambia entre las copias."
   },
   "storeOwnership": {
     "settingsTitle": "TIENDA DE STEAM",

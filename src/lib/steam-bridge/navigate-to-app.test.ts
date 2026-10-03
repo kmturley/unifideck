@@ -98,4 +98,28 @@ describe("navigateToApp", () => {
 
     expect(() => navigateToApp(1)).not.toThrow();
   });
+
+  it("replaces the current page when asked, with the unsigned route", () => {
+    const App = vi.fn();
+    const Navigate = vi.fn();
+    (window as unknown as { SteamUIStore?: unknown }).SteamUIStore = {
+      GetFocusedWindowInstance: () => ({ Navigator: { App }, Navigate }),
+    };
+
+    navigateToApp(-1222327091, { replace: true });
+
+    expect(Navigate).toHaveBeenCalledWith("/library/app/3072640205", true);
+    expect(App).not.toHaveBeenCalled();
+  });
+
+  it("falls back to Navigator.App when the window has no Navigate", () => {
+    const App = vi.fn();
+    (window as unknown as { SteamUIStore?: unknown }).SteamUIStore = {
+      GetFocusedWindowInstance: () => ({ Navigator: { App } }),
+    };
+
+    navigateToApp(409710, { replace: true });
+
+    expect(App).toHaveBeenCalledWith(409710);
+  });
 });

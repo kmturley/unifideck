@@ -101,7 +101,9 @@ function optionLabel(sibling: GroupSibling): ReactElement {
  *  LAST, not first. */
 function sortByStorePriority(siblings: GroupSibling[]): GroupSibling[] {
   return [...siblings].sort(
-    (a, b) => storePriorityRank(a.store) - storePriorityRank(b.store),
+    (a, b) =>
+      storePriorityRank(a.store) - storePriorityRank(b.store) ||
+      Number(a.editionLabel != null) - Number(b.editionLabel != null),
   );
 }
 
@@ -141,7 +143,11 @@ export const GameStoreSwitcher: FC<Props> = ({ appId, siblings }) => {
         selectedOption={selectedOption}
         onChange={(opt) => {
           const target = opt.data as number;
-          if (!appIdsMatch(target, appId)) navigateToApp(target);
+          // Replace, not push: switching copies must not stack pages
+          // that B then walks back through one by one.
+          if (!appIdsMatch(target, appId)) {
+            navigateToApp(target, { replace: true });
+          }
         }}
       />
     </div>

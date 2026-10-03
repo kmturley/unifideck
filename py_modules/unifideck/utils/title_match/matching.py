@@ -49,24 +49,6 @@ def score_match(query_norm: str, candidate_norm: str) -> float:
     return jaccard
 
 
-def leftover_word_count(query_norm: str, candidate_norm: str) -> int:
-    """Words in ``candidate_norm`` that aren't also in ``query_norm``.
-
-    Tie-breaker for "which of several ``titles_match``-accepted
-    candidates is the best one" (see ``core.game_grouping``'s
-    Steam-owned resolver): given several real Steam titles that all
-    fuzzy-match a query, the one with the fewest extra words is the
-    closest fit. ``"Thief"`` vs candidates ``"Thief Gold"`` (1 leftover:
-    "gold") and ``"Thief"`` (0 leftover) picks the exact ``"Thief"``
-    over ``"Thief Gold"`` — the bug this exists to fix was the reverse:
-    dict-iteration order deciding which of several title-matching Steam
-    appids won, independent of fit quality.
-    """
-    qw = set(query_norm.split())
-    cw = set(candidate_norm.split())
-    return len(cw - qw)
-
-
 def clean_search_query(title: str) -> str:
     """Pre-API query cleanup — strip noise that hurts SGDB autocomplete.
 

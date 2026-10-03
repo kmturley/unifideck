@@ -197,11 +197,7 @@ const UnifiedLibraryViewInner: FC<UnifiedLibraryViewProps> = ({
         {loading ? (
           <div style={{ padding: 20, opacity: 0.7 }}>{t("common.loading")}</div>
         ) : (
-          <GameGrid
-            games={filteredGames}
-            onSelect={onSelect ?? (() => {})}
-            groupingEnabled={storeFilter === "all"}
-          />
+          <GameGrid games={filteredGames} onSelect={onSelect ?? (() => {})} />
         )}
       </div>
     </div>

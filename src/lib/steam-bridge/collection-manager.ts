@@ -374,6 +374,17 @@ export interface SteamOwnedGame {
  * duplicate grouping's Steam cross-reference (needs the appid too, to
  * point the detail-page store switcher at the real app).
  */
+/** A Family Sharing game someone else lent: the user does not own it, so it
+ *  must not stand in for (and hide) their own copy on another store. A
+ *  client without these methods counts every game as owned. */
+function isBorrowed(app: SteamAppOverview): boolean {
+  try {
+    return app.BIsBorrowed?.() === true || app.BIsOwned?.() === false;
+  } catch {
+    return false;
+  }
+}
+
 export function collectSteamOwnedGames(): SteamOwnedGame[] {
   const cs = getCollectionStore();
   if (!cs) return [];
@@ -391,6 +402,7 @@ export function collectSteamOwnedGames(): SteamOwnedGame[] {
       continue;
     }
     if (seen.has(a.appid)) continue;
+    if (isBorrowed(a)) continue;
     const title = a.display_name?.trim();
     if (!title) continue;
     seen.add(a.appid);

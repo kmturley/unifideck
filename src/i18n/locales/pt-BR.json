@@ -1071,7 +1071,7 @@
     "enabled": "Coleções ativadas",
     "disabled": "Coleções desativadas",
     "groupDuplicates": "Agrupar duplicatas",
-    "groupDuplicatesDescription": "Combina as cópias de um título de lojas diferentes em um único bloco em Todos os jogos, Ótimo no Deck e Instalados. Desativado por padrão — a cópia de cada loja é exibida separadamente."
+    "groupDuplicatesDescription": "Mostra um único bloco na biblioteca para um jogo que você tem em várias lojas, incluindo outras edições e sua cópia da Steam. Um menu suspenso na página do jogo alterna entre as cópias."
   },
   "storeOwnership": {
     "settingsTitle": "LOJA DO STEAM",

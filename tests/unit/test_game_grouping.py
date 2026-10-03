@@ -1,26 +1,45 @@
 """Tests for the display-only cross-store duplicate grouping.
 
-Exercises ``annotate_duplicate_groups`` against the exact duplicate
-examples surfaced by the user (Behind the Frame, Bus Simulator 21,
-Dungeon of Naheulbeuk, Doors) plus the negative case that must never
-group (sequels).
+Exercises ``annotate_duplicate_groups`` (and through it
+``core.game_identity``) against the duplicate examples surfaced by users
+(Behind the Frame, Bus Simulator 21, Dungeon of Naheulbeuk, Doors), the
+version rule (remasters and editions group, sequels, years and
+same-named different games do not), and the owned-Steam cross-reference.
+Real titles and AppIDs come from the 2026-10-03 full-library POC.
 """
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
-from unifideck.core.game_grouping import annotate_duplicate_groups
+from unifideck.core import game_grouping
+from unifideck.core.game_grouping import (
+    annotate_duplicate_groups,
+    annotate_duplicate_groups_if_enabled,
+)
+from unifideck.core.game_identity import SteamApp
 from unifideck.core.types import Game
-from unifideck.steam.owned_games import OwnedApp
 
 
-def _g(store: str, title: str) -> Game:
+def _g(store: str, title: str, app_id: int = 0) -> Game:
     return Game(
-        app_id=0,
+        app_id=app_id,
         store=store,
         store_game_id=f"{store}-{title}".lower().replace(" ", "-"),
         title=title,
     )
+
+
+def _mapped(games: list[Game], appids: dict[str, int]) -> list[Game]:
+    """Annotate with ``title -> real Steam AppID`` as the mapping."""
+    return annotate_duplicate_groups(
+        games, steam_appid_of=lambda g: appids.get(g.title),
+    )
+
+
+def _grouped(a: Game, b: Game) -> bool:
+    return a.dedupe_group_id is not None and a.dedupe_group_id == b.dedupe_group_id
 
 
 def test_unique_titles_are_not_grouped():
@@ -106,258 +125,255 @@ def test_grouping_never_changes_count_or_order():
     assert [g.store for g in out] == ["epic", "gog", "amazon"]
 
 
-def test_steam_owned_match_sets_app_id():
-    games = [_g("epic", "Disco Elysium")]
-    out = annotate_duplicate_groups(
-        games,
-        steam_owned={"disco elysium": OwnedApp(appid=632470, title="Disco Elysium")},
+# ── Versions of one game group together ─────────────────────────────
+
+
+@pytest.mark.parametrize(("title_a", "title_b"), [
+    ("Mass Effect™ Legendary Edition", "Mass Effect"),
+    ("The Elder Scrolls IV: Oblivion Remastered",
+     "The Elder Scrolls IV: Oblivion Game of the Year Edition"),
+    ("Dishonored - Definitive Edition", "Dishonored"),
+    ("Disco Elysium - The Final Cut", "Disco Elysium"),
+    ("Gears of War: Reloaded", "Gears of War: Ultimate Edition"),
+    ("Saints Row IV: Re-Elected", "Saints Row IV"),
+    ("Metro Last Light Redux", "Metro: Last Light"),
+    ("Quake II (Original)", "Quake II"),
+    ("Mafia: Definitive Edition for XBOX One", "Mafia: Definitive Edition"),
+    ("Medieval Dynasty (Xbox One)", "Medieval Dynasty"),
+    ("Thief II", "Thief 2"),
+])
+def test_versions_of_one_game_group(title_a: str, title_b: str) -> None:
+    a, b = annotate_duplicate_groups([_g("epic", title_a), _g("gog", title_b)])
+    assert _grouped(a, b)
+
+
+def test_an_edition_qualifier_folds_onto_the_base_game() -> None:
+    """"<words> Edition" loses its qualifier when the base game exists."""
+    games = annotate_duplicate_groups([
+        _g("epic", "The Outer Worlds"),
+        _g("gog", "The Outer Worlds: Spacer's Choice Edition"),
+        _g("microsoft", "Hollow Knight: Voidheart Edition"),
+        _g("gog", "Hollow Knight"),
+    ])
+    assert _grouped(games[0], games[1])
+    assert _grouped(games[2], games[3])
+
+
+# ── Different games stay apart ──────────────────────────────────────
+
+
+@pytest.mark.parametrize(("title_a", "title_b"), [
+    ("Car Mechanic Simulator 2021", "Car Mechanic Simulator 2018"),
+    ("Microsoft Flight Simulator (2020)", "Microsoft Flight Simulator 2024"),
+    ("EA SPORTS FC™ 25 Xbox One", "EA SPORTS FC™ 26 Xbox One"),
+    ("Far Cry 3 Blood Dragon", "Far Cry® 3"),
+    ("Tomb Raider: Anniversary", "Tomb Raider"),
+    ("BioShock Infinite", "BioShock"),
+    ("Fallout", "Fallout: New Vegas"),
+    ("Thief", "Thief II"),
+    ("Cyber Revolution", "Cyber"),
+    ("Creative Console", "Creative"),
+    ("Borderlands 2 DLC", "Borderlands 2"),
+])
+def test_different_games_stay_apart(title_a: str, title_b: str) -> None:
+    a, b = annotate_duplicate_groups([_g("epic", title_a), _g("gog", title_b)])
+    assert not _grouped(a, b)
+
+
+@pytest.mark.parametrize(("title_a", "appid_a", "title_b", "appid_b"), [
+    ("STAR WARS™ Battlefront™ II", 1237950,
+     "Star Wars: Battlefront 2 (Classic, 2005)", 6060),
+    ("Dead Space", 1693980, "Dead Space (2008)", 17470),
+])
+def test_same_name_on_different_steam_apps_stays_apart(
+    title_a: str, appid_a: int, title_b: str, appid_b: int,
+) -> None:
+    """No version word explains the different Steam app: two games."""
+    a, b = _mapped(
+        [_g("microsoft", title_a), _g("gog", title_b)],
+        {title_a: appid_a, title_b: appid_b},
     )
-    assert out[0].steam_owned_app_id == 632470
+    assert not _grouped(a, b)
 
 
-def test_steam_owned_no_match_leaves_field_none():
-    games = [_g("epic", "Disco Elysium")]
-    out = annotate_duplicate_groups(
-        games,
-        steam_owned={"some other game": OwnedApp(appid=12345, title="Some Other Game")},
+def test_a_version_word_explains_a_different_steam_app() -> None:
+    a, b = _mapped(
+        [_g("microsoft", "Mass Effect™ Legendary Edition"), _g("gog", "Mass Effect (2007)")],
+        {"Mass Effect™ Legendary Edition": 1328670, "Mass Effect (2007)": 17460},
     )
-    assert out[0].steam_owned_app_id is None
+    assert _grouped(a, b)
 
 
-def test_steam_owned_is_independent_of_dedupe_group():
-    """A singleton title (no cross-store dupe) can still carry
-    steam_owned_app_id — the two fields answer different questions."""
-    games = [_g("epic", "Disco Elysium")]
-    out = annotate_duplicate_groups(
-        games,
-        steam_owned={"disco elysium": OwnedApp(appid=632470, title="Disco Elysium")},
+def test_a_shared_steam_app_joins_different_titles() -> None:
+    a, b = _mapped(
+        [_g("epic", "Orwell: Keeping an Eye on You"), _g("gog", "Orwell")],
+        {"Orwell: Keeping an Eye on You": 491950, "Orwell": 491950},
     )
-    assert out[0].dedupe_group_id is None
-    assert out[0].steam_owned_app_id == 632470
+    assert _grouped(a, b)
 
 
-def test_steam_owned_respects_sequel_boundary():
-    """Beholder 2 must not match a Steam-owned "Beholder"."""
-    games = [_g("amazon", "Beholder 2")]
-    out = annotate_duplicate_groups(
-        games,
-        steam_owned={"beholder": OwnedApp(appid=705810, title="Beholder")},
+def test_bioshock_versions_group_without_chaining_into_infinite() -> None:
+    games = annotate_duplicate_groups([
+        _g("gog", "BioShock™"),
+        _g("gog", "BioShock™ Remastered"),
+        _g("gog", "BioShock Infinite Complete Edition"),
+    ])
+    assert _grouped(games[0], games[1])
+    assert not _grouped(games[0], games[2])
+    assert games[2].dedupe_group_id is None
+
+
+def test_group_id_is_stable_regardless_of_input_order() -> None:
+    titles = ["BioShock™", "BioShock™ Remastered", "BioShock Infinite", "BioShock 2"]
+    forward = annotate_duplicate_groups([_g("gog", t) for t in titles])
+    backward = annotate_duplicate_groups([_g("gog", t) for t in reversed(titles)])
+    ids = {g.title: g.dedupe_group_id for g in forward}
+    assert ids == {g.title: g.dedupe_group_id for g in backward}
+
+
+# ── Owned Steam games ───────────────────────────────────────────────
+
+
+def test_steam_owned_match_sets_app_id_and_steam_edition_label() -> None:
+    (game,) = annotate_duplicate_groups(
+        [_g("epic", "Disco Elysium")],
+        steam_owned=[SteamApp(632470, "Disco Elysium - The Final Cut")],
     )
-    assert out[0].steam_owned_app_id is None
+    assert game.steam_owned_app_id == 632470
+    assert game.steam_owned_edition_label == "The Final Cut"
+    assert game.dedupe_group_id is None  # one library copy is not a group
 
 
-def test_steam_owned_none_is_a_noop():
-    games = [_g("epic", "Disco Elysium")]
-    out = annotate_duplicate_groups(games, steam_owned=None)
-    assert out[0].steam_owned_app_id is None
-
-
-def test_steam_owned_edition_label_extracted_from_steam_title():
-    """Disco Elysium's real regression: the Epic copy and the Steam
-    listing are BOTH "The Final Cut" — the switcher must show that, not
-    a blank/default label, for the synthetic Steam entry."""
-    games = [_g("epic", "Disco Elysium")]
-    out = annotate_duplicate_groups(
-        games,
-        steam_owned={
-            "disco elysium": OwnedApp(
-                appid=632470, title="Disco Elysium - The Final Cut",
-            ),
-        },
+def test_steam_owned_respects_the_sequel_boundary() -> None:
+    (game,) = annotate_duplicate_groups(
+        [_g("epic", "Beholder 2")], steam_owned=[SteamApp(475550, "Beholder")],
     )
-    assert out[0].steam_owned_edition_label == "The Final Cut"
+    assert game.steam_owned_app_id is None
 
 
-def test_steam_owned_edition_label_none_when_steam_title_has_no_suffix():
-    games = [_g("epic", "Disco Elysium")]
-    out = annotate_duplicate_groups(
-        games,
-        steam_owned={"disco elysium": OwnedApp(appid=632470, title="Disco Elysium")},
+def test_steam_owned_apostrophes_match() -> None:
+    (game,) = annotate_duplicate_groups(
+        [_g("microsoft", "Assassin’s Creed® Odyssey")],  # noqa: RUF001 — the curly apostrophe is the case under test
+        steam_owned=[SteamApp(812140, "Assassin's Creed Odyssey")],
     )
-    assert out[0].steam_owned_edition_label is None
+    assert game.steam_owned_app_id == 812140
 
 
-def test_steam_owned_edition_label_independent_of_this_games_own_edition():
-    """The Steam copy's edition label must come from the Steam title,
-    not get contaminated by this game's own (possibly different) one."""
-    games = [_g("epic", "Disco Elysium - Definitive Edition")]
-    out = annotate_duplicate_groups(
-        games,
-        steam_owned={
-            "disco elysium definitive edition": OwnedApp(
-                appid=632470, title="Disco Elysium - The Final Cut",
-            ),
-        },
+def test_steam_owned_remaster_matches_the_original() -> None:
+    (game,) = annotate_duplicate_groups(
+        [_g("microsoft", "The Elder Scrolls IV: Oblivion Remastered")],
+        steam_owned=[SteamApp(22330, "The Elder Scrolls IV: Oblivion Game of the Year Edition (2009)")],
     )
-    assert out[0].edition_label == "Definitive Edition"
-    assert out[0].steam_owned_edition_label == "The Final Cut"
+    assert game.steam_owned_app_id == 22330
 
 
-# ── PR #461 review fixes ────────────────────────────────────────────
-# https://github.com/mubaraknumann/unifideck/pull/461#pullrequestreview-5307127830
-
-
-def test_steam_owned_match_survives_apostrophe_normalizer_mismatch():
-    """A.1 — steam_owned's dict keys come from unifidb's normaliser
-    (strips apostrophes: "assassins creed"), while everything else here
-    uses title_match's (keeps a space: "assassin s"). Matching against
-    the dict KEY silently dropped every apostrophe'd title's Steam
-    cross-reference; matching against OwnedApp.title (the original)
-    fixes it."""
-    games = [_g("epic", "Assassin's Creed")]
-    out = annotate_duplicate_groups(
-        games,
-        steam_owned={
-            "assassins creed": OwnedApp(appid=48190, title="Assassin's Creed"),
-        },
+def test_each_copy_points_at_its_own_owned_version() -> None:
+    """Owning BioShock 2 and its Remastered on Steam: each row its own."""
+    games = annotate_duplicate_groups(
+        [_g("gog", "BioShock® 2"), _g("gog", "BioShock™ 2 Remastered")],
+        steam_owned=[SteamApp(8850, "BioShock 2"), SteamApp(409720, "BioShock 2 Remastered")],
     )
-    assert out[0].steam_owned_app_id == 48190
+    assert [g.steam_owned_app_id for g in games] == [8850, 409720]
 
 
-def test_steam_owned_picks_exact_match_over_shorter_bucket_neighbour():
-    """A.2 — "BioShock Infinite" must match the owned "BioShock
-    Infinite" (8870), not whichever of the two bucket entries dict
-    iteration visits first (previously could return "BioShock", 7670)."""
-    games = [_g("epic", "BioShock Infinite")]
-    steam_owned = {
-        "bioshock": OwnedApp(appid=7670, title="BioShock"),
-        "bioshock infinite": OwnedApp(appid=8870, title="BioShock Infinite"),
-    }
-    out = annotate_duplicate_groups(games, steam_owned=steam_owned)
-    assert out[0].steam_owned_app_id == 8870
+def test_an_identical_title_beats_a_wrong_mapping() -> None:
+    """Xbox "Thief" (2014) was mapped to Thief Gold by the store search."""
+    (game,) = _mapped_with_owned(
+        [_g("microsoft", "Thief")], {"Thief": 211600},
+        [SteamApp(239160, "Thief"), SteamApp(211600, "Thief Gold")],
+    )
+    assert game.steam_owned_app_id == 239160
 
 
-def test_steam_owned_picks_thief_gold_not_base_thief():
-    """A.2 — "Thief Gold" must match owned "Thief Gold" (211600), not
-    the unrelated "Thief" (2014) also sharing the "thief" bucket."""
-    games = [_g("epic", "Thief Gold")]
-    steam_owned = {
-        "thief 2014": OwnedApp(appid=239160, title="Thief"),
-        "thief gold": OwnedApp(appid=211600, title="Thief Gold"),
-    }
-    out = annotate_duplicate_groups(games, steam_owned=steam_owned)
-    assert out[0].steam_owned_app_id == 211600
+def test_a_mapped_unowned_remake_never_takes_the_owned_original() -> None:
+    (game,) = _mapped_with_owned(
+        [_g("microsoft", "Dead Space")], {"Dead Space": 1693980},
+        [SteamApp(17470, "Dead Space (2008)")],
+    )
+    assert game.steam_owned_app_id is None
 
 
-def test_steam_owned_picks_skyrim_special_edition_not_base_skyrim():
-    """A.2 — "Skyrim Special Edition" must match the owned SE (489830),
-    not the base "Skyrim" (72850) sharing its bucket."""
-    games = [_g("epic", "The Elder Scrolls V: Skyrim Special Edition")]
-    steam_owned = {
-        "the elder scrolls v skyrim": OwnedApp(
-            appid=72850, title="The Elder Scrolls V: Skyrim",
-        ),
-        "the elder scrolls v skyrim special edition": OwnedApp(
-            appid=489830, title="The Elder Scrolls V: Skyrim Special Edition",
-        ),
-    }
-    out = annotate_duplicate_groups(games, steam_owned=steam_owned)
-    assert out[0].steam_owned_app_id == 489830
+def _mapped_with_owned(
+    games: list[Game], appids: dict[str, int], owned: list[SteamApp],
+) -> list[Game]:
+    return annotate_duplicate_groups(
+        games, steam_appid_of=lambda g: appids.get(g.title), steam_owned=owned,
+    )
 
 
-@pytest.mark.parametrize(
-    ("title_a", "title_b"),
-    [
-        ("Fallout", "Fallout: New Vegas"),
-        ("Microsoft Flight Simulator 2020", "Microsoft Flight Simulator 2024"),
-        ("Dead Space", "Dead Space (2023)"),
-        ("Killer Instinct", "Killer Instinct Classic"),
-        ("Mass Effect Legendary Edition", "Mass Effect"),
-        (
-            "The Elder Scrolls IV: Oblivion Remastered",
-            "The Elder Scrolls IV: Oblivion Game of the Year Edition",
-        ),
-        ("Tomb Raider: Anniversary", "Tomb Raider (2013)"),
-        ("Far Cry 3: Blood Dragon", "Far Cry 3"),
-        ("Car Mechanic Simulator 2021", "Car Mechanic Simulator 2018"),
-        ("Star Wars Battlefront II (2017)", "Star Wars Battlefront 2 (2005)"),
-        # Found via a live-library audit: "Definitive Edition" is used
-        # both for a distinct remaster with its own store page
-        # (Dishonored, Thief, Tomb Raider, Ori and the Blind Forest all
-        # have one) and for a publisher's only current listing of an
-        # older game (Mafia, Gamedec — no separate unsuffixed release
-        # exists, so those stay correctly grouped; see
-        # test_definitive_edition_reissue_still_groups_with_itself
-        # below). Grouping must assume the first case, same as
-        # "Remastered"/"Remake".
-        ("Dishonored", "Dishonored - Definitive Edition"),
-        ("Thief", "THIEF: Definitive Edition"),
-        ("Tomb Raider", "Tomb Raider: Definitive Edition"),
-        ("Ori and the Blind Forest", "Ori and the Blind Forest: Definitive Edition"),
-    ],
-)
-def test_sequels_remakes_and_years_are_never_grouped(title_a, title_b):
-    """A.3 — sequels, remakes/remasters, and differing yearly releases
-    must never share a card; `titles_match`'s fuzzy tolerance (built for
-    artwork lookup) is deliberately NOT reused here.
+# ── Re-annotation and the setting ───────────────────────────────────
 
-    Each title also gets a same-store "twin" (identical title, a
-    different store) so a real group forms on both sides — proving
-    ``title_a`` and ``title_b`` don't merge into ONE group rather than
-    merely observing two singletons, which would trivially satisfy a
-    weaker "not equal" check since singletons are always ``None``."""
-    games = [
-        _g("epic", title_a),
-        _g("gog", title_a),
-        _g("amazon", title_b),
-        _g("ubisoft", title_b),
+
+def test_a_match_that_no_longer_holds_is_cleared() -> None:
+    """Fields round-trip through library_cache.json, so a stale match
+    from an earlier run must not survive the next annotation."""
+    game = _g("microsoft", "Mass Effect™ Legendary Edition")
+    game.steam_owned_app_id = 17460
+    game.steam_owned_edition_label = "stale"
+    game.dedupe_group_id = "stale"
+    annotate_duplicate_groups([game])
+    assert game.steam_owned_app_id is None
+    assert game.steam_owned_edition_label is None
+    assert game.dedupe_group_id is None
+
+
+class _Config:
+    def __init__(self, enabled: bool) -> None:
+        self._enabled = enabled
+
+    def get(self, key: str, default: Any) -> Any:
+        return self._enabled if key == "dedup.ui_grouping_enabled" else default
+
+
+def test_turning_grouping_off_clears_every_field() -> None:
+    games = annotate_duplicate_groups(
+        [_g("epic", "Dishonored"), _g("gog", "Dishonored - Definitive Edition")],
+        steam_owned=[SteamApp(205100, "Dishonored")],
+    )
+    assert games[0].dedupe_group_id is not None
+
+    annotate_duplicate_groups_if_enabled(games, _Config(enabled=False))
+
+    for game in games:
+        assert game.dedupe_group_id is None
+        assert game.edition_label is None
+        assert game.steam_owned_app_id is None
+        assert game.steam_owned_edition_label is None
+
+
+def test_enabled_path_reads_the_mapping_cache_and_owned_library(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr(
+        game_grouping, "load_owned_steam_apps",
+        lambda _config: [SteamApp(17470, "Dead Space (2008)")],
+    )
+
+    class _Cache:
+        def get(self, namespace: str, key: str) -> Any:
+            return {"-5": 1693980}.get(key) if namespace == "steam_real_appid" else None
+
+    (game,) = annotate_duplicate_groups_if_enabled(
+        [_g("microsoft", "Dead Space", app_id=-5)], _Config(enabled=True), _Cache(),
+    )
+    assert game.steam_owned_app_id is None
+
+
+def test_every_owned_steam_version_is_listed_on_every_copy() -> None:
+    """BioShock and BioShock Remastered owned on Steam and on GOG: each GOG
+    copy points at its own Steam version, and both list both."""
+    games = annotate_duplicate_groups(
+        [_g("gog", "BioShock™"), _g("gog", "BioShock™ Remastered")],
+        steam_owned=[SteamApp(7670, "BioShock"), SteamApp(409710, "BioShock Remastered")],
+    )
+    expected = [
+        {"app_id": 7670, "edition_label": None},
+        {"app_id": 409710, "edition_label": "Remastered"},
     ]
-    out = annotate_duplicate_groups(games)
-    group_a = {out[0].dedupe_group_id, out[1].dedupe_group_id}
-    group_b = {out[2].dedupe_group_id, out[3].dedupe_group_id}
-    assert None not in group_a
-    assert None not in group_b
-    assert group_a.isdisjoint(group_b)
+    assert [g.steam_owned_app_id for g in games] == [7670, 409710]
+    assert [g.steam_versions for g in games] == [expected, expected]
 
 
-def test_definitive_edition_reissue_still_groups_with_itself():
-    """Refusing to strip "Definitive Edition" for grouping (see the
-    parametrized case above) must not stop two store copies of the SAME
-    Definitive Edition release from grouping with each other — only
-    cross-store copies of an unsuffixed sibling should be kept apart.
-    Mirrors "Mafia: Definitive Edition" / "Gamedec - Definitive Edition"
-    from the live-library audit, neither of which has a separate
-    unsuffixed release in the library to conflict with."""
-    games = [
-        _g("epic", "Mafia: Definitive Edition"),
-        _g("gog", "Mafia: Definitive Edition"),
-    ]
-    out = annotate_duplicate_groups(games)
-    assert out[0].dedupe_group_id is not None
-    assert out[0].dedupe_group_id == out[1].dedupe_group_id
-
-
-def test_bioshock_chain_never_transitively_groups():
-    """A.4 — union-find used to chain BioShock ~ BioShock Infinite and
-    BioShock ~ BioShock Remastered into one group even though Infinite
-    and Remastered don't match each other. Canonical-key grouping can't
-    chain: none of the three share an exact canonical key, so none
-    group at all (each stays its own singleton, dedupe_group_id=None)."""
-    games = [
-        _g("epic", "BioShock"),
-        _g("gog", "BioShock Infinite"),
-        _g("amazon", "BioShock Remastered"),
-    ]
-    out = annotate_duplicate_groups(games)
-    non_singleton_ids = [g.dedupe_group_id for g in out if g.dedupe_group_id]
-    assert len(non_singleton_ids) == len(set(non_singleton_ids))
-
-
-def test_group_id_is_stable_regardless_of_input_order():
-    """A.5 — the group id is the canonical key itself, not a union-find
-    root, so it doesn't depend on which order the games were passed
-    in."""
-    forward = [
-        _g("epic", "Cyberpunk 2077"),
-        _g("gog", "Cyberpunk 2077: Ultimate Edition"),
-    ]
-    reversed_ = [
-        _g("gog", "Cyberpunk 2077: Ultimate Edition"),
-        _g("epic", "Cyberpunk 2077"),
-    ]
-    out_forward = annotate_duplicate_groups(forward)
-    out_reversed = annotate_duplicate_groups(reversed_)
-    assert (
-        sorted(g.dedupe_group_id for g in out_forward)
-        == sorted(g.dedupe_group_id for g in out_reversed)
-    )
+def test_steam_versions_are_cleared_with_the_other_fields() -> None:
+    game = _g("gog", "Unrelated Game")
+    game.steam_versions = [{"app_id": 1, "edition_label": None}]
+    annotate_duplicate_groups([game])
+    assert game.steam_versions == []

@@ -650,7 +650,7 @@
     "enabled": "已啟用收藏",
     "disabled": "已禁用收藏",
     "groupDuplicates": "合併重複項目",
-    "groupDuplicatesDescription": "將同一款遊戲在不同商店的副本合併為「所有遊戲」、「Deck 最佳」和「已安裝」分頁中的單一圖塊。預設為關閉——每個商店的副本將個別顯示。"
+    "groupDuplicatesDescription": "將你在多個商店擁有的同一款遊戲（包括其他版本和 Steam 副本）在收藏庫中合併為一個圖塊。遊戲頁面上的下拉選單可在各副本之間切換。"
   },
   "storeOwnership": {
     "settingsTitle": "STEAM 商店",

@@ -1071,7 +1071,7 @@
     "enabled": "Sammlungen aktiviert",
     "disabled": "Sammlungen deaktiviert",
     "groupDuplicates": "Duplikate gruppieren",
-    "groupDuplicatesDescription": "Fasst die Kopien eines Titels aus verschiedenen Stores in „Alle Spiele“, „Optimal für Deck“ und „Installiert“ zu einer Kachel zusammen. Standardmäßig deaktiviert – jede Store-Kopie wird separat angezeigt."
+    "groupDuplicatesDescription": "Zeigt eine Bibliothekskachel pro Spiel, das du in mehreren Stores besitzt, einschließlich anderer Editionen und deiner Steam-Kopie. Ein Auswahlmenü auf der Spielseite wechselt zwischen den Kopien."
   },
   "storeOwnership": {
     "settingsTitle": "STEAM-SHOP",

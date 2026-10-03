@@ -13,6 +13,7 @@ from typing import Any
 
 from unifideck.cdp.store_ribbon import RibbonInjectOutcome, inject_store_ribbon
 from unifideck.core.cross_store_ownership import OwnedCopy, find_owned_copies
+from unifideck.core.game_grouping import load_owned_steam_apps
 from unifideck.rpc.mixins._store_ownership_payload import (
     RibbonStrings,
     build_ribbon_payload,
@@ -82,8 +83,11 @@ class StoreOwnershipRPCMixin:
         except Exception as exc:
             logger.warning("[StoreOwnership] get_all_games failed: %s", exc)
             return []
+        cache = getattr(self, "cache", None)
         return find_owned_copies(
-            games, getattr(self, "cache", None), appid, self._purchase_indexes(),
+            games, cache, appid, self._purchase_indexes(),
+            owned_steam=load_owned_steam_apps(getattr(self, "config", None)),
+            steam_name=read_steam_name(cache, appid),
         )
 
     def _purchase_indexes(self) -> dict[str, Any]:

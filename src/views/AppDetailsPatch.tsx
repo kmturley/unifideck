@@ -279,9 +279,11 @@ function injectStoreSwitcher(
   appId: number,
   version: number,
 ): void {
-  const baseKey = `unifideck-store-switcher-${appId}`;
-  const versionedKey = `${baseKey}-v${version}`;
-  const existingIdx = children.findIndex((c) => keyOf(c).startsWith(baseKey));
+  // Match through the "-v" separator: a bare prefix would take app 12's
+  // switcher for app 123's.
+  const keyPrefix = `unifideck-store-switcher-${appId}-v`;
+  const versionedKey = `${keyPrefix}${version}`;
+  const existingIdx = children.findIndex((c) => keyOf(c).startsWith(keyPrefix));
   const siblings = getGroupSiblings(appId);
 
   if (siblings.length < 2) {

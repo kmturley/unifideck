@@ -60,11 +60,36 @@ def _strip_wrapping_brackets(label: str) -> str:
 # titles carry their year as part of the game's identity, not an edition.
 # This is why the split point comes from strip_edition_suffix_for_label_split
 # (never strips a trailing year) rather than strip_edition_suffix (matching
-# stays permissive about years — see GROUPING_UNSAFE_SUFFIXES's docstring
-# for why grouping is the one place a year is never negotiable) — UNLESS
+# stays permissive about years) — UNLESS
 # the year sits directly next to "edition" ("Sea of Thieves: 2025
 # Edition"), which names a specific branded release rather than standing in
 # for the base game's own version year.
+_TITLE_SEPARATOR = re.compile(r"\s*:\s+|\s+[-–—]\s+")  # noqa: RUF001 — real en/em dashes appear in titles
+_MAX_QUALIFIED_EDITION_WORDS = 4
+
+
+def _qualified_edition(title: str) -> str:
+    """A named edition with its qualifier: "Voidheart Edition", not "Edition".
+
+    The edition stripper removes only the word "edition" (a qualifier is
+    indistinguishable from a title word by position), so the slice alone
+    yields a bare "Edition". Take the part after the title's last separator
+    when it is short and ends in "edition" ("The Outer Worlds: Spacer's
+    Choice Edition" → "Spacer's Choice Edition"), else the last two words
+    ("Trine Enchanted Edition" → "Enchanted Edition").
+    """
+    parts = _TITLE_SEPARATOR.split(title.strip())
+    tail = parts[-1].strip()
+    words = tail.split()
+    if (
+        len(parts) > 1
+        and 1 < len(words) <= _MAX_QUALIFIED_EDITION_WORDS
+        and words[-1].lower() == "edition"
+    ):
+        return tail
+    return " ".join(title.split()[-2:])
+
+
 def extract_edition_label(title: str) -> str | None:
     """Human-readable edition/variant suffix, case preserved.
 
@@ -114,6 +139,8 @@ def extract_edition_label(title: str) -> str | None:
             # the leading preposition reads oddly as a label on its own
             # ("for Xbox") — the platform name alone is the useful part.
             label = re.sub(r"^for\s+", "", label, flags=re.IGNORECASE)
+            if label.lower() == "edition":
+                label = _qualified_edition(title)
             return label or None
         word_normalized = normalize_for_match(word)
         consumed_tokens += len(word_normalized.split()) if word_normalized else 0

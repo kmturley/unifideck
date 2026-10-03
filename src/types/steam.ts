@@ -79,6 +79,11 @@ export interface SteamAppOverview extends SteamApp {
   GetCapsuleImageURL(): string;
   GetHeaderImageURL(): string;
   GetLibraryImageURL(): string;
+  /** Ownership, measured on SteamOS 2026-10-03. Optional: older clients
+   *  may not have them. `BIsBorrowed` is true for a Family Sharing game
+   *  lent by someone else. */
+  BIsOwned?(): boolean;
+  BIsBorrowed?(): boolean;
 }
 
 /**

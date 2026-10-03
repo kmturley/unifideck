@@ -1071,7 +1071,7 @@
     "enabled": "Kolekcje włączone",
     "disabled": "Kolekcje wyłączone",
     "groupDuplicates": "Grupuj duplikaty",
-    "groupDuplicatesDescription": "Łączy kopie tytułu z różnych sklepów w jeden kafelek w zakładkach Wszystkie gry, Świetne na Decka i Zainstalowane. Domyślnie wyłączone — kopia z każdego sklepu jest wyświetlana osobno."
+    "groupDuplicatesDescription": "Pokazuje jeden kafelek w bibliotece dla gry posiadanej w kilku sklepach, w tym innych edycji i kopii ze Steam. Lista rozwijana na stronie gry przełącza między kopiami."
   },
   "storeOwnership": {
     "settingsTitle": "SKLEP STEAM",

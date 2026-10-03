@@ -33,6 +33,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
+from unifideck.core.game_identity import SteamApp, build_identity
 from unifideck.core.steam_appid_map import read_positive_steam_appid
 from unifideck.core.store_capabilities import SUBSCRIPTION_LIBRARY_STORES
 from unifideck.core.types.domain import Game
@@ -118,16 +119,29 @@ def platform_label(products: Sequence[PurchasedProduct]) -> str:
 def find_owned_copies(
     games: Iterable[Game], cache: Any, steam_app_id: int,
     purchases: Mapping[str, PurchaseIndex] | None = None,
+    *,
+    owned_steam: Sequence[SteamApp] = (),
+    steam_name: str = "",
 ) -> list[OwnedCopy]:
     """Every non-Steam store holding *steam_app_id*, purchases first.
+
+    A library row holds the game when it is any version of it, by the same
+    rule the library's duplicate grouping uses
+    (:mod:`unifideck.core.game_identity`): the Mass Effect (2007) page
+    lists an owned "Mass Effect Legendary Edition". The owned title is
+    shown when it differs from the page's, so the user sees which version.
 
     Args:
         games: the unified library (``sync_service.get_all_games()``).
         cache: the ``CacheManager``; a cold or raising cache yields no
-            mappings, so the answer is ``[]`` rather than an error.
+            mappings, so only title matches remain.
         steam_app_id: the real Steam AppID the store page shows.
         purchases: authenticated purchase indexes by store id (see the
             module docstring); ``None`` or a missing store means none.
+        owned_steam: the user's owned Steam games, which anchor versions
+            whose rows map to a different Steam app.
+        steam_name: the page's Steam name, so an unowned page still finds
+            other versions by title.
 
     Returns:
         One :class:`OwnedCopy` per store, sorted purchased before
@@ -136,7 +150,9 @@ def find_owned_copies(
     if steam_app_id <= 0:
         return []
     purchases = purchases or {}
-    matched, library_ids = _library_matches(games, cache, steam_app_id, purchases)
+    games = list(games)
+    same_game = _same_game_rows(games, cache, steam_app_id, owned_steam, steam_name)
+    matched, library_ids = _library_matches(games, same_game, purchases)
     copies = [
         copy for store in sorted(set(matched) | set(purchases))
         if (copy := _store_copy(
@@ -148,12 +164,28 @@ def find_owned_copies(
     return copies
 
 
+def _same_game_rows(
+    games: list[Game], cache: Any, steam_app_id: int,
+    owned_steam: Sequence[SteamApp], steam_name: str,
+) -> set[int]:
+    """``id()`` of every row that is a version of Steam app *steam_app_id*."""
+    owned = list(owned_steam)
+    if steam_name and all(app.appid != steam_app_id for app in owned):
+        owned.append(SteamApp(steam_app_id, steam_name))
+    identity = build_identity(
+        [game.title or "" for game in games],
+        [read_positive_steam_appid(cache, game.app_id) or None for game in games],
+        owned,
+    )
+    return {id(games[i]) for i in identity.rows_for_steam_app(steam_app_id)}
+
+
 def _library_matches(
-    games: Iterable[Game], cache: Any, steam_app_id: int,
+    games: Iterable[Game], same_game: set[int],
     purchases: Mapping[str, PurchaseIndex],
 ) -> tuple[dict[str, list[Game]], dict[str, set[str]]]:
-    """Rows mapped to *steam_app_id* per store, and every product id of the
-    indexed stores' libraries (an indexed product with a row is that row's)."""
+    """Rows of the game per store, and every product id of the indexed
+    stores' libraries (an indexed product with a row is that row's)."""
     matched: dict[str, list[Game]] = {}
     library_ids: dict[str, set[str]] = {store: set() for store in purchases}
     for game in games:
@@ -161,7 +193,7 @@ def _library_matches(
             continue
         if game.store in library_ids:
             library_ids[game.store].add(_product_id(game))
-        if read_positive_steam_appid(cache, game.app_id) == steam_app_id:
+        if id(game) in same_game:
             matched.setdefault(game.store, []).append(game)
     return matched, library_ids
 

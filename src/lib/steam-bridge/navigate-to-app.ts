@@ -44,9 +44,24 @@ interface NavigatorWithApp {
 }
 interface WindowWithNavigator {
   Navigator?: NavigatorWithApp;
+  /** `Navigate(path, replace)`: the window's router call. With `replace`
+   *  it swaps the current history entry instead of pushing one (measured
+   *  on SteamOS 2026-10-03: history length unchanged, action "REPLACE",
+   *  and a shortcut's unsigned `/library/app/<id>` route renders). */
+  Navigate?: (path: string, replace?: boolean) => void;
 }
 
-export function navigateToApp(appId: number): void {
+export interface NavigateToAppOptions {
+  /** Replace the current page instead of adding one. The store switcher
+   *  uses it, so hopping between copies of a game never piles up pages
+   *  that B has to walk back through. */
+  replace?: boolean;
+}
+
+export function navigateToApp(
+  appId: number,
+  { replace = false }: NavigateToAppOptions = {},
+): void {
   const steamUIStore = (
     window as unknown as {
       SteamUIStore?: { GetFocusedWindowInstance?: () => WindowWithNavigator };
@@ -77,5 +92,10 @@ export function navigateToApp(appId: number): void {
     );
     return;
   }
-  win.Navigator.App(toUnsignedAppId(appId));
+  const unsigned = toUnsignedAppId(appId);
+  if (replace && typeof win.Navigate === "function") {
+    win.Navigate(`/library/app/${unsigned}`, true);
+    return;
+  }
+  win.Navigator.App(unsigned);
 }

@@ -650,7 +650,7 @@
     "enabled": "Collections enabled",
     "disabled": "Collections disabled",
     "groupDuplicates": "Group duplicates",
-    "groupDuplicatesDescription": "Collapse multiple copies from different stores into one Library tile. Provides a dropdown on the title detail page to toggle between duplicates."
+    "groupDuplicatesDescription": "Show one Library tile for a game you own on several stores, including other editions and your Steam copy. A dropdown on the game's page switches between copies."
   },
   "storeOwnership": {
     "settingsTitle": "STEAM STORE",

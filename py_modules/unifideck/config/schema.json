@@ -94,7 +94,7 @@
         },
         "ui_grouping_enabled": {
           "type": "boolean",
-          "description": "Default true: stamp cross-store duplicates with a shared dedupe_group_id / edition_label so the All Games grid can show one card per title (multi-store badge cluster) and the detail page can offer a store switcher. Display-only \u2014 unlike cross_store_enabled, this never removes a shortcut. Escape hatch only; set false to fall back to one tile per store copy."
+          "description": "Default true: stamp every copy of a game (any store, any version, plus the owned Steam copy) with a shared dedupe_group_id, so the library's \"Group duplicates\" setting can show one tile per game and the game page can offer a store switcher. Display-only \u2014 unlike cross_store_enabled, this never removes a shortcut. Escape hatch only: false clears every grouping field, one tile per store copy."
         }
       }
     },

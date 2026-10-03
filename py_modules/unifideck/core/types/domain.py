@@ -66,6 +66,11 @@ class Game:
             separately-matched Steam copy's title, and title-matching
             tolerates edition differences on purpose so the two are not
             guaranteed to agree.
+        steam_versions: every owned Steam app in this game's group, as
+            ``{"app_id": int, "edition_label": str | None}``, the same list
+            on every member. Owning BioShock and BioShock Remastered on
+            Steam puts both here, so the store switcher lists both and the
+            library shows one Steam tile for the pair. Empty when none.
     """
 
     app_id: int
@@ -85,6 +90,7 @@ class Game:
     edition_label: str | None = None
     steam_owned_app_id: int | None = None
     steam_owned_edition_label: str | None = None
+    steam_versions: list[dict[str, Any]] = field(default_factory=list)
 
 @dataclass
 class StoreInfo:

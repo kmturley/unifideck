@@ -53,6 +53,7 @@ import {
   isHiddenDuplicate,
   getGroupSiblings,
   appIdsMatch,
+  isHiddenSteamVersion,
   type UnifideckGameInput,
 } from "./index";
 import { isGroupDuplicatesEnabled, setGroupDuplicatesEnabled } from "../group-duplicates-setting";
@@ -758,5 +759,83 @@ describe("loadUnifideckCache bumps detail-page version on a group change (C.12)"
     await loadUnifideckCache();
 
     expect(getGameStateVersion(555)).toBe(before);
+  });
+});
+
+// Owning several Steam versions of one game (BioShock + Remastered, on
+// Steam AND on GOG): the switcher lists every copy, and the library shows
+// one Steam tile for the pair.
+describe("several owned Steam versions of one game", () => {
+  const versions = [
+    { appId: 7670, editionLabel: undefined },
+    { appId: 409710, editionLabel: "Remastered" },
+  ];
+  const games: UnifideckGameInput[] = [
+    {
+      appId: 1,
+      store: "gog",
+      isInstalled: false,
+      title: "BioShock",
+      dedupeGroupId: "bioshock",
+      steamOwnedAppId: 7670,
+      steamVersions: versions,
+    },
+    {
+      appId: 2,
+      store: "gog",
+      isInstalled: false,
+      title: "BioShock Remastered",
+      dedupeGroupId: "bioshock",
+      editionLabel: "Remastered",
+      steamOwnedAppId: 409710,
+      steamOwnedEditionLabel: "Remastered",
+      steamVersions: versions,
+    },
+  ];
+
+  function steamApp(appId: number): SteamAppOverview {
+    return { appid: appId, app_type: 1, display_name: "BioShock" } as unknown as SteamAppOverview;
+  }
+
+  beforeEach(() => {
+    unifideckGameCache.clear();
+    setGroupDuplicatesEnabled(true);
+    updateUnifideckCache(games);
+  });
+
+  it("lists both Steam versions and both GOG copies from any of the four pages", () => {
+    for (const page of [1, 2, 7670, 409710]) {
+      const listed = getGroupSiblings(page).map((s) => `${s.store}:${s.appId}`);
+      expect(listed.sort()).toEqual(["gog:1", "gog:2", "steam:409710", "steam:7670"]);
+    }
+  });
+
+  it("keeps each Steam version's own edition label", () => {
+    const steam = getGroupSiblings(1).filter((s) => s.store === "steam");
+    expect(steam.find((s) => s.appId === 409710)?.editionLabel).toBe("Remastered");
+    expect(steam.find((s) => s.appId === 7670)?.editionLabel).toBeUndefined();
+  });
+
+  it("shows one Steam tile for the pair while grouping is on", () => {
+    const all = { type: "all" as const, params: {} };
+    // Neither installed: the newest (the remaster) represents the game.
+    expect(runFilter(all, steamApp(409710))).toBe(true);
+    expect(runFilter(all, steamApp(7670))).toBe(false);
+    expect(isHiddenSteamVersion(7670)).toBe(true);
+
+    setGroupDuplicatesEnabled(false);
+    expect(runFilter(all, steamApp(7670))).toBe(true);
+  });
+
+  it("prefers the installed Steam version", () => {
+    (window as unknown as { appStore?: unknown }).appStore = {
+      GetAppOverviewByAppID: (id: number) => ({ installed: id === 7670 }),
+    };
+    try {
+      expect(isHiddenSteamVersion(7670)).toBe(false);
+      expect(isHiddenSteamVersion(409710)).toBe(true);
+    } finally {
+      delete (window as unknown as { appStore?: unknown }).appStore;
+    }
   });
 });

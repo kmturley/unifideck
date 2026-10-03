@@ -1071,7 +1071,7 @@
     "enabled": "コレクションが有効",
     "disabled": "コレクションが無効",
     "groupDuplicates": "重複をグループ化",
-    "groupDuplicatesDescription": "異なるストアの同じタイトルのコピーを、すべてのゲーム、Deckに最適、インストール済みの各タブで1つのタイルにまとめます。デフォルトではオフです。各ストアのコピーは個別に表示されます。"
+    "groupDuplicatesDescription": "複数のストアで所有しているゲームを、別エディションやSteam版も含めてライブラリで1つのタイルにまとめます。ゲームページのドロップダウンでコピーを切り替えられます。"
   },
   "storeOwnership": {
     "settingsTitle": "STEAM ストア",

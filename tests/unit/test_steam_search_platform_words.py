@@ -19,11 +19,12 @@ from typing import Any
 import pytest
 
 from unifideck.steam import library
-from unifideck.utils.platform_words import (
+from unifideck.utils.title_match import (
+    normalize_for_match,
+    strip_edition_suffix,
     strip_platform_suffix,
-    strip_search_suffixes,
+    titles_match,
 )
-from unifideck.utils.title_match import normalize_for_match, titles_match
 
 
 @pytest.mark.parametrize(("title", "expected"), [
@@ -44,20 +45,14 @@ def test_only_platform_words_are_stripped(title: str, expected: str) -> None:
      "call of duty modern warfare"),
 ])
 def test_the_full_strip_reaches_the_base_game(title: str, expected: str) -> None:
-    assert strip_search_suffixes(normalize_for_match(title)) == expected
-
-
-def _without_platform(title: str) -> str:
-    return strip_platform_suffix(normalize_for_match(title))
+    assert strip_edition_suffix(normalize_for_match(title)) == expected
 
 
 def test_the_steam_name_still_has_to_match_the_full_title() -> None:
-    assert titles_match(_without_platform("DOOM Eternal Standard Edition (PC)"), "DOOM Eternal")
-    assert titles_match(
-        _without_platform("Wolfenstein: The Old Blood (PC)"), "Wolfenstein: The Old Blood",
-    )
+    assert titles_match("DOOM Eternal Standard Edition (PC)", "DOOM Eternal")
+    assert titles_match("Wolfenstein: The Old Blood (PC)", "Wolfenstein: The Old Blood")
     # A separate product, not the game: "battlemode" is not edition noise.
-    assert not titles_match(_without_platform("DOOM Eternal (BATTLEMODE - PC)"), "DOOM Eternal")
+    assert not titles_match("DOOM Eternal (BATTLEMODE - PC)", "DOOM Eternal")
 
 
 def _fake_search(

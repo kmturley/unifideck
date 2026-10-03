@@ -1,39 +1,43 @@
 """Edition/platform/variant suffix tables and stripping.
 
 Split out of the former monolithic ``title_match.py`` (2026-09-26, file-size
-gate). Two stripping strategies live here side by side because they answer
-different questions:
-
-* :func:`strip_edition_suffix` — "what's the base title", for *matching*
-  (artwork/metadata lookup), where accepting "same game, different
-  edition/remaster/year" is exactly the point.
-* :func:`strip_edition_suffix_for_grouping` — the same question for
-  cross-store duplicate *grouping*, which is a stronger claim: a remaster,
-  remake, or differently-numbered yearly release is a distinct product a
-  player owns and plays separately, so :data:`GROUPING_UNSAFE_SUFFIXES` and
-  a trailing year must survive here even though matching folds them away.
+gate). :func:`strip_edition_suffix` answers "what's the base title" for
+*matching* (artwork/metadata lookup), where accepting "same game, different
+edition/remaster/year" is exactly the point. :func:`strip_platform_suffix`
+is its narrow cousin for a store search query. Deciding which library rows
+are the same game is ``core.game_identity``'s job, built on this table.
 """
 from __future__ import annotations
 
 import re
 
-# 58-entry suffix table, longest-first within each group so
+# Platform words: noise in a title, never part of a game's name. Longest
+# first, and "for <platform>" before the bare platform, so "X for Xbox One"
+# loses all three words instead of leaving "X for". The bare "pc" is what
+# "(PC)" normalises to ("DOOM Eternal Standard Edition (PC)").
+PLATFORM_SUFFIXES: tuple[str, ...] = (
+    "for xbox series xs", "for xbox one", "for windows 10",
+    "for pc", "for windows", "for xbox",
+    "xbox series xs edition", "xbox one edition", "xbox edition",
+    "xbox series xs", "xbox one version", "xbox one",
+    "pc edition", "windows 10 edition", "windows edition",
+    "console edition",
+    "windows", "console", "xs", "pc",
+)
+
+# The full suffix table, longest-first within each group so
 # "xbox series xs edition" gets stripped before "xbox edition" /
 # "edition" alone. The iterative outer loop in ``strip_edition_suffix``
 # restarts after each strip so compound suffixes work end-to-end
 # (e.g. "X Standard Edition Windows" → strip Windows → strip
 # Standard Edition → "X").
 EDITION_SUFFIXES: tuple[str, ...] = (
-    # Platform / console suffixes
-    "xbox series xs edition", "xbox one edition", "xbox edition",
-    "xbox series xs", "xbox one version", "xbox one",
-    "pc edition", "windows 10 edition", "windows edition",
-    "console edition",
-    "for pc", "for windows", "for xbox",
+    *PLATFORM_SUFFIXES,
     # Distribution / bundle suffixes
     "cross gen bundle", "cross gen edition", "game preview",
     "the complete season", "the complete first season",
-    # Full edition names
+    # Full edition names ("digital …" before the edition it qualifies)
+    "digital standard edition", "digital deluxe edition",
     "deluxe edition", "gold edition", "ultimate edition",
     "complete edition", "goty edition", "game of the year edition",
     "definitive edition", "enhanced edition", "special edition",
@@ -43,16 +47,19 @@ EDITION_SUFFIXES: tuple[str, ...] = (
     "legendary edition", "elite edition", "ea play edition",
     "remastered", "remake", "directors cut", "the final cut",
     "unofficial patch",
+    "revolution",
     "digital version",
-    # Short / standalone (word boundary ensured by space-prefix check).
-    # Deliberately excludes bare "revolution" and "console": both are
-    # common LAST WORDS of real, unrelated game titles ("Cyber
-    # Revolution", "Duel Revolution", "Creative Console" all appeared in
-    # a live-library audit getting their real title word eaten as a
-    # fake "edition"), unlike "goty"/"hd"/"ce"/"dlc", which are genuine
-    # edition/release jargon with no similar false-positive found.
-    "goty", "hd", "ce", "dlc", "windows", "xs",
+    # Short / standalone (word boundary ensured by space-prefix check)
+    "goty", "hd", "ce", "dlc",
 )
+
+# Table entries that are also the last word of real, unrelated titles
+# ("Cyber Revolution", "Duel Revolution", "Creative Console" all appeared
+# in a live-library audit). Matching and store search keep stripping them,
+# because a search query loses little by dropping a platform word. The
+# label and grouping strippers skip them, because there a stripped word
+# becomes a fake "edition" label or merges two different games.
+TITLE_WORD_SUFFIXES: frozenset[str] = frozenset({"console", "revolution"})
 
 
 def strip_edition_suffix(normalized: str) -> str:
@@ -87,9 +94,33 @@ def strip_edition_suffix(normalized: str) -> str:
     return normalized
 
 
-def _strip_known_suffix(s: str) -> str | None:
-    """Strip one entry from the explicit ``EDITION_SUFFIXES`` table."""
+def strip_platform_suffix(normalized: str) -> str:
+    """Strip trailing platform words only (:data:`PLATFORM_SUFFIXES`).
+
+    The narrow cousin of :func:`strip_edition_suffix`, for a search query:
+    "mafia definitive edition for xbox one" → "mafia definitive edition".
+    Edition words stay, so a store search still finds the edition that is
+    its own game instead of the bare franchise ("Mafia", the 2002 game).
+    """
+    changed = True
+    while changed:
+        changed = False
+        for suffix in PLATFORM_SUFFIXES:
+            if normalized.endswith(" " + suffix):
+                normalized = normalized[: -(len(suffix) + 1)].strip()
+                changed = True
+                break
+    return normalized
+
+
+def _strip_known_suffix(
+    s: str, skip: frozenset[str] = frozenset(),
+) -> str | None:
+    """Strip one entry from the explicit ``EDITION_SUFFIXES`` table,
+    leaving any entry in *skip* in place."""
     for suffix in EDITION_SUFFIXES:
+        if suffix in skip:
+            continue
         if s.endswith(" " + suffix):
             stripped = s[: -(len(suffix) + 1)].strip()
             if stripped:
@@ -186,8 +217,13 @@ _STRIP_STRATEGIES = (
 # Edition" does in the full iterate-to-fixpoint loop). Dropping the
 # year-stripper from this variant keeps a trailing year attached to the
 # base for splitting purposes, whatever else is stripped around it.
+def _strip_known_suffix_for_label(s: str) -> str | None:
+    """Like :func:`_strip_known_suffix`, minus :data:`TITLE_WORD_SUFFIXES`."""
+    return _strip_known_suffix(s, TITLE_WORD_SUFFIXES)
+
+
 _LABEL_SPLIT_STRIP_STRATEGIES = (
-    _strip_known_suffix,
+    _strip_known_suffix_for_label,
     _strip_edition_phrase,
     _strip_chapters_episodes,
     _strip_celebration,
@@ -202,85 +238,6 @@ def strip_edition_suffix_for_label_split(normalized: str) -> str:
     while changed:
         changed = False
         for strip in _LABEL_SPLIT_STRIP_STRATEGIES:
-            stripped = strip(normalized)
-            if stripped and stripped != normalized:
-                normalized = stripped
-                changed = True
-                break
-    return normalized
-
-
-# Suffixes that ``titles_match`` (artwork/metadata resolution) tolerates
-# as "same game, different release", but which ``core.game_grouping``
-# must NOT dissolve — grouping "Dead Space" with "Dead Space
-# (2023)" would collapse a remake and its 2008 original into one card,
-# hiding a real game behind the other's tile. Everything else in
-# ``EDITION_SUFFIXES`` (platform tags, "Deluxe/Ultimate/GOTY Edition",
-# etc.) really is the same product re-skinned and stays safe to strip.
-#
-# "Definitive Edition" belongs here too, alongside "Remastered"/"Remake":
-# publishers use it for both meanings, and grouping can't tell them apart
-# from the string alone —
-#   - a distinct remaster with its own store page and appid (Dishonored
-#     - Definitive Edition, THIEF: Definitive Edition, Tomb Raider:
-#     Definitive Edition, Ori and the Blind Forest: Definitive Edition —
-#     each sits next to an unsuffixed original in real libraries), vs.
-#   - a publisher's only current listing for an older game (Mafia:
-#     Definitive Edition, Gamedec - Definitive Edition), where there is
-#     no separate unsuffixed release to conflict with.
-# Refusing to strip it costs nothing in the second case (the title just
-# stays an ungrouped singleton, same as today) and fixes real over-
-# merging in the first — see the audit that found Dishonored, Thief and
-# Tomb Raider all wrongly sharing a card with their Definitive Edition.
-GROUPING_UNSAFE_SUFFIXES: frozenset[str] = frozenset({
-    "remastered", "remake", "directors cut", "the final cut",
-    "classic edition", "legendary edition", "definitive edition",
-})
-
-
-def _strip_known_suffix_for_grouping(s: str) -> str | None:
-    """Like :func:`_strip_known_suffix`, minus :data:`GROUPING_UNSAFE_SUFFIXES`."""
-    for suffix in EDITION_SUFFIXES:
-        if suffix in GROUPING_UNSAFE_SUFFIXES:
-            continue
-        if s.endswith(" " + suffix):
-            stripped = s[: -(len(suffix) + 1)].strip()
-            if stripped:
-                return stripped
-    return None
-
-
-# Grouping never strips a trailing year (a differing year names a
-# different release — "Flight Simulator 2020" vs "…2024", "Battlefront
-# 2005" vs "…2017") or an anniversary/celebration phrase (same
-# reasoning), unlike :func:`strip_edition_suffix`'s full strategy list.
-_GROUPING_STRIP_STRATEGIES = (
-    _strip_known_suffix_for_grouping,
-    _strip_edition_phrase,
-    _strip_chapters_episodes,
-)
-
-
-def strip_edition_suffix_for_grouping(normalized: str) -> str:
-    """Edition-suffix stripping for cross-store duplicate *grouping* only.
-
-    Deliberately more conservative than :func:`strip_edition_suffix`:
-    that function widens matching for artwork/metadata lookup, where
-    accepting "same game, different edition/remaster/year" is exactly
-    the point. Grouping two library entries onto one visible card is a
-    stronger claim — a remaster, remake, or differently-numbered yearly
-    release is a distinct product a player owns and plays separately,
-    so those must survive here even though they're deliberately folded
-    away for artwork purposes. See :data:`GROUPING_UNSAFE_SUFFIXES` and
-    the trailing-year/celebration omission above.
-
-    Pure function; same iterate-to-fixpoint shape as
-    :func:`strip_edition_suffix`.
-    """
-    changed = True
-    while changed:
-        changed = False
-        for strip in _GROUPING_STRIP_STRATEGIES:
             stripped = strip(normalized)
             if stripped and stripped != normalized:
                 normalized = stripped

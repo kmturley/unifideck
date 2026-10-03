@@ -67,6 +67,7 @@ vi.mock("i18next", () => ({
 }));
 
 import {
+  collectSteamOwnedGames,
   deleteAllUnifideckCollections,
   syncUnifideckCollections,
   startCollectionManager,
@@ -266,5 +267,30 @@ describe("device-type race", () => {
     // then cloud-sync to every device on the account.
     expect(names).toContain("[Unifideck] Great on Machine");
     expect(names).not.toContain("[Unifideck] Great on Deck");
+  });
+});
+
+describe("collectSteamOwnedGames", () => {
+  function app(appid: number, title: string, extra: object = {}): object {
+    return { appid, display_name: title, app_type: 1, ...extra };
+  }
+
+  function withGames(apps: object[]): void {
+    (window as unknown as { collectionStore: unknown }).collectionStore = {
+      GetCollection: () => ({ allApps: apps }),
+    };
+  }
+
+  it("lists owned games and skips a game borrowed through Family Sharing", () => {
+    withGames([
+      app(10, "Owned", { BIsOwned: () => true, BIsBorrowed: () => false }),
+      app(20, "Borrowed", { BIsOwned: () => false, BIsBorrowed: () => true }),
+      app(30, "Older client"),
+    ]);
+
+    expect(collectSteamOwnedGames()).toEqual([
+      { title: "Owned", appid: 10 },
+      { title: "Older client", appid: 30 },
+    ]);
   });
 });

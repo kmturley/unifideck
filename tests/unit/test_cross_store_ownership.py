@@ -127,3 +127,52 @@ def test_a_non_positive_app_id_short_circuits() -> None:
     assert find_owned_copies(games, _Cache({"1": BG2}), 0) == []
     assert find_owned_copies(games, _Cache({"1": BG2}), -5) == []
 
+
+
+# ── Other versions of the game (shared with the library's grouping) ──
+
+def test_an_owned_remaster_shows_on_the_original_s_page() -> None:
+    """Mass Effect (2007) page: the Legendary Edition on Xbox counts."""
+    from unifideck.core.game_identity import SteamApp
+
+    games = [_game(7, "microsoft", "Mass Effect™ Legendary Edition")]
+    copies = find_owned_copies(
+        games, _Cache({"7": 1328670}), 17460,
+        owned_steam=[SteamApp(17460, "Mass Effect (2007)")],
+    )
+
+    assert [(c.store, c.titles) for c in copies] == [
+        ("microsoft", ("Mass Effect™ Legendary Edition",)),
+    ]
+
+
+def test_an_unowned_page_finds_versions_by_its_steam_name() -> None:
+    games = [_game(8, "gog", "Dishonored - Definitive Edition")]
+    copies = find_owned_copies(games, _Cache({}), 205100, steam_name="Dishonored")
+
+    assert [c.store for c in copies] == ["gog"]
+
+
+def test_a_same_named_different_game_does_not_count() -> None:
+    """Battlefront II (2017) on Xbox is not the 2005 game on this page."""
+    games = [_game(9, "microsoft", "STAR WARS™ Battlefront™ II")]
+    copies = find_owned_copies(
+        games, _Cache({"9": 1237950}), 6060,
+        steam_name="Star Wars: Battlefront 2 (Classic, 2005)",
+    )
+
+    assert copies == []
+
+
+def test_an_identical_owned_title_moves_a_wrong_mapping() -> None:
+    """Xbox "Thief" was mapped to Thief Gold; it is the owned "Thief"."""
+    from unifideck.core.game_identity import SteamApp
+
+    games = [_game(10, "microsoft", "Thief")]
+    owned = [SteamApp(239160, "Thief"), SteamApp(211600, "Thief Gold")]
+    cache = _Cache({"10": 211600})
+
+    assert find_owned_copies(games, cache, 211600, owned_steam=owned) == []
+    assert [c.store for c in find_owned_copies(games, cache, 239160, owned_steam=owned)] == [
+        "microsoft",
+    ]

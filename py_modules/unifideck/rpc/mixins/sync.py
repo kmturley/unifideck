@@ -113,21 +113,23 @@ class SyncRPCMixin(CleanupRPCMixin):
         """
         return self.sync_service.get_all_games()
 
-    async def update_steam_owned_titles(self, games: list[dict[str, Any]]) -> Any:
-        """Persist the full owned-Steam-library {title, appid} from the frontend.
+    async def update_steam_owned_titles(self, games: list[Any]) -> Any:
+        """Persist the full owned Steam library pushed by the frontend.
 
-        ``appmanifest`` only sees *installed* Steam games, so neither the
-        Ubisoft Steam-linked filter nor the cross-store duplicate-grouping
-        Steam cross-reference (``core.game_grouping``) can see a title
-        the user owns but hasn't installed. The frontend enumerates the
-        full owned library (``collectionStore``) and pushes
-        ``{title, appid}`` pairs here.
+        ``appmanifest`` only sees *installed* Steam games, so the frontend
+        enumerates the full owned library (``collectionStore``) and pushes
+        it here as ``{title, appid}`` pairs. Two caches are written: titles
+        for the Ubisoft Steam-linked filter
+        (:mod:`unifideck.stores.ubisoft.library.steam_filter`), and
+        title + appid for duplicate grouping (:mod:`unifideck.core.game_grouping`).
 
-        Writes both caches: the title-only one
-        (:mod:`unifideck.stores.ubisoft.library.steam_filter`'s existing
-        consumer, unchanged) and the title+appid one
-        (:mod:`unifideck.core.game_grouping`'s new consumer, which needs
-        the real appid to point the detail-page store switcher at).
+        A plain list of titles (the payload before PR #461) still updates
+        the title cache and leaves the appid cache alone, so a frontend and
+        backend from different builds never wipe either one.
+
+        The library is then re-grouped off the event loop: a full pass is
+        about 100 ms on a large library, plus the cache write.
+
         Returns ``{"count": <stored>}``.
         """
         from unifideck.steam.owned_games import (
@@ -135,24 +137,15 @@ class SyncRPCMixin(CleanupRPCMixin):
             save_frontend_owned_titles,
         )
 
-        safe = [g for g in (games or []) if isinstance(g, dict)]
-        titles = [g["title"] for g in safe if isinstance(g.get("title"), str)]
+        items = list(games or [])
+        pairs = [g for g in items if isinstance(g, dict)]
+        titles = [g["title"] for g in pairs if isinstance(g.get("title"), str)]
+        titles += [t for t in items if isinstance(t, str)]
         save_frontend_owned_titles(titles)
-        count = save_frontend_owned_games(safe)
+        count = save_frontend_owned_games(pairs) if pairs else len(titles)
 
-        # C.11 — without this, a freshly-pushed Steam-owned snapshot only
-        # affects grouping/`steam_owned_app_id` at the NEXT full sync's
-        # `_maybe_annotate_duplicate_groups` call, so a duplicate group
-        # that should now show "already on Steam" stays stale until then.
-        # `_annotate_loaded_cache` mutates `self._all_games`'s `Game`
-        # objects in place (not a `get_all_games()` snapshot copy, which
-        # would silently update nothing this RPC's caller can see) and is
-        # already best-effort/exception-safe, so reuse it here rather than
-        # duplicate its annotation-and-error-handling shape.
         if self.sync_service is not None:
-            self.sync_service._annotate_loaded_cache()
-            self.sync_service._save_library_cache()
-
+            await asyncio.to_thread(self.sync_service.refresh_duplicate_groups)
         return {"count": count}
 
     async def set_active_steam_user(self, account_id: str) -> Any:
