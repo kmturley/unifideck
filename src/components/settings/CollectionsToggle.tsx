@@ -44,7 +44,6 @@ export const CollectionsToggle: FC = () => {
       <PanelSectionRow>
         <ToggleField
           label={t("collectionSettings.groupDuplicates")}
-          description={t("collectionSettings.groupDuplicatesDescription")}
           checked={groupDuplicates}
           onChange={setGroupDuplicates}
         />

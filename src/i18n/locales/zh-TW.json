@@ -649,13 +649,11 @@
     "title": "STEAM 收藏",
     "enabled": "已啟用收藏",
     "disabled": "已禁用收藏",
-    "groupDuplicates": "合併重複項目",
-    "groupDuplicatesDescription": "將你在多個商店擁有的同一款遊戲（包括其他版本和 Steam 副本）在收藏庫中合併為一個圖塊。遊戲頁面上的下拉選單可在各副本之間切換。"
+    "groupDuplicates": "合併重複項目"
   },
   "storeOwnership": {
     "settingsTitle": "STEAM 商店",
-    "toggleLabel": "標記您已擁有的遊戲",
-    "toggleDescription": "在 Steam 商店頁面上標記您在其他商店已擁有的遊戲（遊戲模式）。",
+    "toggleLabel": "標記您已在其他商店擁有的遊戲",
     "tagOwned": "已擁有",
     "tagStreamable": "可串流",
     "messageOwned": "您已在以下商店擁有此遊戲：",

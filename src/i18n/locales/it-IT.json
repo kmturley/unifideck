@@ -1070,13 +1070,11 @@
     "title": "COLLEZIONI DI STEAM",
     "enabled": "Collezioni abilitate",
     "disabled": "Collezioni disabilitate",
-    "groupDuplicates": "Raggruppa duplicati",
-    "groupDuplicatesDescription": "Mostra un solo riquadro nella libreria per un gioco che possiedi su più store, incluse altre edizioni e la tua copia Steam. Un menu a tendina nella pagina del gioco passa da una copia all'altra."
+    "groupDuplicates": "Raggruppa duplicati"
   },
   "storeOwnership": {
     "settingsTitle": "NEGOZIO DI STEAM",
-    "toggleLabel": "Mostra i giochi che possiedi già",
-    "toggleDescription": "Segnala nelle pagine del negozio di Steam i giochi che possiedi su altri negozi (modalità Gioco).",
+    "toggleLabel": "Segnala i giochi che possiedi già in un altro store",
     "tagOwned": "Posseduto",
     "tagStreamable": "In streaming",
     "messageOwned": "Possiedi già questo gioco su:",

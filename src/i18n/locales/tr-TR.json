@@ -1070,13 +1070,11 @@
     "title": "STEAM KOLEKSİYONLARI",
     "enabled": "Koleksiyonlar etkin",
     "disabled": "Koleksiyonlar devre dışı",
-    "groupDuplicates": "Yinelenenleri grupla",
-    "groupDuplicatesDescription": "Birden fazla mağazada sahip olduğun bir oyun için, diğer sürümler ve Steam kopyan dahil, kütüphanede tek bir kutucuk gösterir. Oyun sayfasındaki açılır menü kopyalar arasında geçiş yapar."
+    "groupDuplicates": "Yinelenenleri grupla"
   },
   "storeOwnership": {
     "settingsTitle": "STEAM MAĞAZASI",
-    "toggleLabel": "Zaten sahip olduğunuz oyunları göster",
-    "toggleDescription": "Diğer mağazalarda sahip olduğunuz oyunların Steam Mağazası sayfalarını işaretler (Oyun Modu).",
+    "toggleLabel": "Başka bir mağazada zaten sahip olduğunuz oyunları işaretle",
     "tagOwned": "Sahip olunan",
     "tagStreamable": "Akışla oynanabilir",
     "messageOwned": "Bu oyuna zaten şurada sahipsiniz:",

@@ -135,7 +135,7 @@ export const GameStoreSwitcher: FC<Props> = ({ appId, siblings }) => {
         left: OVERLAY_LEFT_PX,
         zIndex: 5,
         width: "fit-content",
-        background: "rgba(0, 0, 0, 0.5)",
+        background: "rgba(0, 0, 0, 0.6)",
       }}
     >
       <Dropdown

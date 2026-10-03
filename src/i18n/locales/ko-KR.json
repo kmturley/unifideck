@@ -1070,13 +1070,11 @@
     "title": "STEAM 컬렉션",
     "enabled": "컬렉션 활성화됨",
     "disabled": "컬렉션 비활성화됨",
-    "groupDuplicates": "중복 항목 그룹화",
-    "groupDuplicatesDescription": "여러 스토어에서 보유한 게임을 다른 에디션과 Steam 사본까지 포함해 라이브러리에서 하나의 타일로 표시합니다. 게임 페이지의 드롭다운으로 사본을 전환할 수 있습니다."
+    "groupDuplicates": "중복 항목 그룹화"
   },
   "storeOwnership": {
     "settingsTitle": "STEAM 상점",
-    "toggleLabel": "이미 보유한 게임 표시",
-    "toggleDescription": "다른 스토어에서 보유한 게임의 Steam 상점 페이지에 표시합니다(게임 모드).",
+    "toggleLabel": "다른 스토어에서 이미 보유한 게임 표시",
     "tagOwned": "보유 중",
     "tagStreamable": "스트리밍 가능",
     "messageOwned": "이미 다음 스토어에서 이 게임을 보유하고 있습니다:",

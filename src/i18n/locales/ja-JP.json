@@ -1070,13 +1070,11 @@
     "title": "STEAM コレクション",
     "enabled": "コレクションが有効",
     "disabled": "コレクションが無効",
-    "groupDuplicates": "重複をグループ化",
-    "groupDuplicatesDescription": "複数のストアで所有しているゲームを、別エディションやSteam版も含めてライブラリで1つのタイルにまとめます。ゲームページのドロップダウンでコピーを切り替えられます。"
+    "groupDuplicates": "重複をグループ化"
   },
   "storeOwnership": {
     "settingsTitle": "STEAM ストア",
-    "toggleLabel": "所有済みのゲームを表示",
-    "toggleDescription": "他のストアで所有しているゲームの Steam ストアページに印を付けます（ゲーミングモード）。",
+    "toggleLabel": "他のストアで所有済みのゲームに印を付ける",
     "tagOwned": "所有済み",
     "tagStreamable": "ストリーミング可",
     "messageOwned": "このゲームは次のストアで所有済みです:",

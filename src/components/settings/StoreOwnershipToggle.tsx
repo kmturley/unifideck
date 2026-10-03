@@ -17,7 +17,6 @@ export const StoreOwnershipToggle: FC = () => {
       <PanelSectionRow>
         <ToggleField
           label={t("storeOwnership.toggleLabel")}
-          description={t("storeOwnership.toggleDescription")}
           checked={enabled}
           onChange={setEnabled}
         />

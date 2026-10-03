@@ -1070,13 +1070,11 @@
     "title": "STEAM-COLLECTIES",
     "enabled": "Collecties ingeschakeld",
     "disabled": "Collecties uitgeschakeld",
-    "groupDuplicates": "Duplicaten groeperen",
-    "groupDuplicatesDescription": "Toont één bibliotheektegel voor een game die je in meerdere winkels bezit, inclusief andere edities en je Steam-exemplaar. Met een keuzemenu op de gamepagina wissel je tussen exemplaren."
+    "groupDuplicates": "Duplicaten groeperen"
   },
   "storeOwnership": {
     "settingsTitle": "STEAM-WINKEL",
-    "toggleLabel": "Games tonen die je al hebt",
-    "toggleDescription": "Markeert Steam-winkelpagina's van games die je in andere winkels hebt (gamemodus).",
+    "toggleLabel": "Games markeren die je al in een andere winkel hebt",
     "tagOwned": "In bezit",
     "tagStreamable": "Streambaar",
     "messageOwned": "Je hebt deze game al op:",

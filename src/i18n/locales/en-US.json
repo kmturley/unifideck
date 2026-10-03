@@ -649,13 +649,11 @@
     "title": "STEAM COLLECTIONS",
     "enabled": "Collections enabled",
     "disabled": "Collections disabled",
-    "groupDuplicates": "Group duplicates",
-    "groupDuplicatesDescription": "Show one Library tile for a game you own on several stores, including other editions and your Steam copy. A dropdown on the game's page switches between copies."
+    "groupDuplicates": "Group duplicates"
   },
   "storeOwnership": {
     "settingsTitle": "STEAM STORE",
-    "toggleLabel": "Show games you already own",
-    "toggleDescription": "Marks Steam Store pages of games you own on other stores (Gaming Mode).",
+    "toggleLabel": "Flag games you already own on another store",
     "tagOwned": "Owned",
     "tagStreamable": "Streamable",
     "messageOwned": "You already own this game on:",

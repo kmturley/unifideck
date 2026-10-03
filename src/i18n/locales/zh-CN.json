@@ -1070,13 +1070,11 @@
     "title": "STEAM 收藏夹",
     "enabled": "收藏夹已启用",
     "disabled": "收藏夹已禁用",
-    "groupDuplicates": "合并重复项",
-    "groupDuplicatesDescription": "将你在多个商店拥有的同一款游戏（包括其他版本和 Steam 副本）在库中合并为一个图块。游戏页面上的下拉菜单可在各副本之间切换。"
+    "groupDuplicates": "合并重复项"
   },
   "storeOwnership": {
     "settingsTitle": "STEAM 商店",
-    "toggleLabel": "标记您已拥有的游戏",
-    "toggleDescription": "在 Steam 商店页面上标记您在其他商店已拥有的游戏（游戏模式）。",
+    "toggleLabel": "标记您已在其他商店拥有的游戏",
     "tagOwned": "已拥有",
     "tagStreamable": "可串流",
     "messageOwned": "您已在以下商店拥有此游戏：",

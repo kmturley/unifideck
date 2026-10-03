@@ -1070,13 +1070,11 @@
     "title": "STEAM-SAMMLUNGEN",
     "enabled": "Sammlungen aktiviert",
     "disabled": "Sammlungen deaktiviert",
-    "groupDuplicates": "Duplikate gruppieren",
-    "groupDuplicatesDescription": "Zeigt eine Bibliothekskachel pro Spiel, das du in mehreren Stores besitzt, einschließlich anderer Editionen und deiner Steam-Kopie. Ein Auswahlmenü auf der Spielseite wechselt zwischen den Kopien."
+    "groupDuplicates": "Duplikate gruppieren"
   },
   "storeOwnership": {
     "settingsTitle": "STEAM-SHOP",
-    "toggleLabel": "Bereits besessene Spiele anzeigen",
-    "toggleDescription": "Markiert Steam-Shop-Seiten von Spielen, die Sie in anderen Stores besitzen (Spielmodus).",
+    "toggleLabel": "Spiele markieren, die du bereits in einem anderen Store besitzt",
     "tagOwned": "Im Besitz",
     "tagStreamable": "Streambar",
     "messageOwned": "Sie besitzen dieses Spiel bereits bei:",
