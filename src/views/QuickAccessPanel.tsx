@@ -37,9 +37,18 @@
  * Verified on-device: without this, `styles`/`dom` on
  * `QuickAccess_uid*` showed the tab content wrapper stuck at
  * `height: 50px` regardless of the ~390px actually available.
+ *
+ * `Tabs` is also laid out for a full page: side padding on the
+ * header and on the content pane, and spacers around the tab
+ * row. In the 300px QAM that cost the content 48px of width and
+ * clipped the second tab. `TABS_CSS` puts the geometry back to
+ * what the hand-rolled row had: 4px/8px header padding, two
+ * half-width tabs 6px apart, a 12px gap above full-width
+ * content. The L1/R1 glyphs stay: Steam shows them only while
+ * the tab row has focus, and the tabs share what is left.
  */
 import { FC, useLayoutEffect, useRef, useState } from "react";
-import { Tabs } from "@decky/ui";
+import { Tabs, findClassModule } from "@decky/ui";
 import { useTranslation } from "react-i18next";
 import {
   StoreConnections,
@@ -47,6 +56,7 @@ import {
   LanguageSelector,
   GameDetailsViewModeToggle,
   CollectionsToggle,
+  StoreOwnershipToggle,
   CleanupSection,
   CaptureLogsSection,
   PluginUpdater,
@@ -61,6 +71,44 @@ let persistentActiveTab: ActiveTab = "settings";
 
 /** Decky's Quick-Access content slot for the active plugin tab. */
 const QUICKACCESS_SLOT_SELECTOR = '[id^="quickaccess_content_"]';
+
+/** Scope class on our root, so the overrides below touch only this panel. */
+const ROOT_CLASS = "unifideck-qam-tabs";
+
+/**
+ * Steam's tabbed-page CSS module, the one `Tabs` renders with. Its class
+ * names are hashed per build, so they are looked up at runtime.
+ */
+const tabClasses = findClassModule(
+  (m) => m.TabContentsScroll && m.TabRowTabs,
+) as Record<string, string> | undefined;
+
+/**
+ * Pre-`Tabs` QAM geometry, applied over Steam's full-page layout.
+ *
+ * Content starts at 58px: the 46px header (4px top padding + 42px tab)
+ * plus the 12px gap the old row kept above the first section.
+ * Empty if Steam ever renames the module: the panel then keeps Steam's
+ * own (wider) spacing rather than breaking.
+ */
+const TABS_CSS = ((c) => {
+  if (!c) return "";
+  const s = `.${ROOT_CLASS}`;
+  return `
+    ${s} .${c.TabHeaderRowWrapper} { padding: 4px 8px 0 !important; }
+    ${s} .${c.TabRowSpacer} { display: none !important; }
+    ${s} .${c.TabRow}, ${s} .${c.TabRowTabs}, ${s} .${c.TabsRowScroll} { width: 100%; }
+    ${s} .${c.FixCenterAlignScroll} {
+      display: flex; gap: 6px; width: 100%; padding: 0 !important;
+    }
+    ${s} .${c.Tab} {
+      flex: 1; min-width: 0; padding: 10px 6px !important;
+      justify-content: center; font-size: 0.9em;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    ${s} .${c.TabContentsScroll} { padding: 58px 0 40px !important; }
+  `;
+})(tabClasses);
 
 /**
  * Root component of the Decky Loader Quick Access menu.
@@ -82,16 +130,23 @@ export const QuickAccessPanel: FC = () => {
   // against the Quick-Access slot rather than our own parent, because our
   // parent auto-sizes to US — measuring it would be circular. The slot's
   // own height comes from Decky, not from our content, so it is safe to
-  // subtract our sibling (Decky's title bar) from it and re-measure on
-  // resize, which also covers the Deck/desktop QAM size difference.
+  // subtract whatever sits above us in it and re-measure on resize, which
+  // also covers the Deck/desktop QAM size difference.
+  //
+  // "Whatever sits above us" is measured as our offset inside the slot, not
+  // as a sibling's height: Decky puts its title bar beside a padded wrapper
+  // around us, so we have no previous sibling and the old sibling lookup
+  // subtracted 0, overflowing the slot by the title bar + 16px.
   useLayoutEffect(() => {
     const root = rootRef.current;
     const slot = root?.closest<HTMLElement>(QUICKACCESS_SLOT_SELECTOR);
     if (!root || !slot) return;
     const measure = (): void => {
-      const titleBarHeight =
-        root.previousElementSibling?.getBoundingClientRect().height ?? 0;
-      setHeight(slot.clientHeight - titleBarHeight);
+      const offset =
+        root.getBoundingClientRect().top -
+        slot.getBoundingClientRect().top +
+        slot.scrollTop;
+      setHeight(Math.max(0, slot.clientHeight - offset));
     };
     measure();
     const observer = new ResizeObserver(measure);
@@ -107,7 +162,12 @@ export const QuickAccessPanel: FC = () => {
   const downloadsLabel = t("tabs.downloads");
 
   return (
-    <div ref={rootRef} style={{ position: "relative", height }}>
+    <div
+      ref={rootRef}
+      className={ROOT_CLASS}
+      style={{ position: "relative", height }}
+    >
+      {TABS_CSS && <style>{TABS_CSS}</style>}
       <Tabs
         activeTab={tab}
         onShowTab={(next: string) => setTab(next as ActiveTab)}
@@ -122,6 +182,7 @@ export const QuickAccessPanel: FC = () => {
                 <LanguageSelector />
                 <GameDetailsViewModeToggle />
                 <CollectionsToggle />
+                <StoreOwnershipToggle />
                 <PluginUpdater />
                 <CleanupSection />
                 <CaptureLogsSection />
