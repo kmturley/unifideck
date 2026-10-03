@@ -1,6 +1,6 @@
 """Store-agnostic title-matching primitives.
 
-Pure functions + the edition-suffix table. Pure means no I/O,
+Pure functions + the 58-entry edition-suffix table. Pure means no I/O,
 no async, no logging — testable in isolation. Originally written for the
 SGDB 6-pass ``search_game_id`` ladder, but normalisation / edition
 stripping / Jaccard scoring are storefront-independent, so this is the
@@ -38,33 +38,23 @@ from __future__ import annotations
 import re
 import unicodedata
 
-# Platform words: noise in a title, never part of a game's name. Longest
-# first, and "for <platform>" before the bare platform, so "X for Xbox One"
-# loses all three words instead of leaving "X for". The bare "pc" is what
-# "(PC)" normalises to ("DOOM Eternal Standard Edition (PC)").
-PLATFORM_SUFFIXES: tuple[str, ...] = (
-    "for xbox series xs", "for xbox one", "for windows 10",
-    "for pc", "for windows", "for xbox",
-    "xbox series xs edition", "xbox one edition", "xbox edition",
-    "xbox series xs", "xbox one version", "xbox one",
-    "pc edition", "windows 10 edition", "windows edition",
-    "console edition",
-    "windows", "console", "xs", "pc",
-)
-
-# The full suffix table, longest-first within each group so
+# 58-entry suffix table, longest-first within each group so
 # "xbox series xs edition" gets stripped before "xbox edition" /
 # "edition" alone. The iterative outer loop in ``strip_edition_suffix``
 # restarts after each strip so compound suffixes work end-to-end
 # (e.g. "X Standard Edition Windows" → strip Windows → strip
 # Standard Edition → "X").
 EDITION_SUFFIXES: tuple[str, ...] = (
-    *PLATFORM_SUFFIXES,
+    # Platform / console suffixes
+    "xbox series xs edition", "xbox one edition", "xbox edition",
+    "xbox series xs", "xbox one version", "xbox one",
+    "pc edition", "windows 10 edition", "windows edition",
+    "console edition",
+    "for pc", "for windows", "for xbox",
     # Distribution / bundle suffixes
     "cross gen bundle", "cross gen edition", "game preview",
     "the complete season", "the complete first season",
-    # Full edition names ("digital …" before the edition it qualifies)
-    "digital standard edition", "digital deluxe edition",
+    # Full edition names
     "deluxe edition", "gold edition", "ultimate edition",
     "complete edition", "goty edition", "game of the year edition",
     "definitive edition", "enhanced edition", "special edition",
@@ -77,7 +67,7 @@ EDITION_SUFFIXES: tuple[str, ...] = (
     "revolution",
     "digital version",
     # Short / standalone (word boundary ensured by space-prefix check)
-    "goty", "hd", "ce", "dlc",
+    "goty", "hd", "ce", "dlc", "windows", "console", "xs",
 )
 
 # Multi-character Roman numerals → Arabic, for version folding ("Thief II"
@@ -188,25 +178,6 @@ def strip_edition_suffix(normalized: str) -> str:
             stripped = strip(normalized)
             if stripped and stripped != normalized:
                 normalized = stripped
-                changed = True
-                break
-    return normalized
-
-
-def strip_platform_suffix(normalized: str) -> str:
-    """Strip trailing platform words only (:data:`PLATFORM_SUFFIXES`).
-
-    The narrow cousin of :func:`strip_edition_suffix`, for a search query:
-    "mafia definitive edition for xbox one" → "mafia definitive edition".
-    Edition words stay, so a store search still finds the edition that is
-    its own game instead of the bare franchise ("Mafia", the 2002 game).
-    """
-    changed = True
-    while changed:
-        changed = False
-        for suffix in PLATFORM_SUFFIXES:
-            if normalized.endswith(" " + suffix):
-                normalized = normalized[: -(len(suffix) + 1)].strip()
                 changed = True
                 break
     return normalized

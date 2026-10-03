@@ -11,12 +11,11 @@ import aiohttp
 
 from unifideck.steam.http_retry import STEAM_STORE_GATE, get_json_with_backoff
 from unifideck.utils.config_helpers import get_cfg
-from unifideck.utils.title_match import (
-    normalize_for_match,
-    strip_edition_suffix,
+from unifideck.utils.platform_words import (
     strip_platform_suffix,
-    titles_match,
+    strip_search_suffixes,
 )
+from unifideck.utils.title_match import normalize_for_match, titles_match
 from unifideck.utils.vdf_compat import (
     STEAM_ROOT_CANDIDATES,
     resolve_live_steam_root,
@@ -163,16 +162,17 @@ async def _retry_cleaned(
     and finds the game for "doom eternal". Platform words go first, alone,
     so an edition that is its own Steam game ("Mafia: Definitive Edition")
     is searched before its bare franchise. Every hit still has to pass
-    ``titles_match`` against the full title.
+    ``titles_match`` against the full title, minus its platform words.
     """
     normalized = normalize_for_match(title)
+    without_platform = strip_platform_suffix(normalized)
     tried = {normalized}
-    for query in (strip_platform_suffix(normalized), strip_edition_suffix(normalized)):
+    for query in (without_platform, strip_search_suffixes(normalized)):
         if not query or query in tried:
             continue
         tried.add(query)
         match = _pick_store_match(
-            title, await _storesearch_items(query, timeout_s, session),
+            without_platform, await _storesearch_items(query, timeout_s, session),
         )
         if match is not None:
             return match

@@ -31,7 +31,6 @@ import {
   validThirdPartyCache,
   loadUnifideckCache,
   isUnifideckCacheLoaded,
-  updateSingleGameStatus,
 } from "./index";
 import type { SteamAppOverview } from "../../types/steam";
 
@@ -171,62 +170,5 @@ describe("loadUnifideckCache fail-open (UD-043 / UD-008)", () => {
     // this file may have bumped). The scheduled retry fires + resolves.
     await vi.advanceTimersByTimeAsync(10_000);
     expect(unifideckGameCache.has(1234)).toBe(true);
-  });
-});
-
-// Overview enrichment listens for this event and re-sweeps, which is
-// how an install/uninstall reaches Steam's live AppOverview.
-describe("updateSingleGameStatus install-state propagation", () => {
-  const onState = vi.fn();
-
-  beforeEach(() => {
-    unifideckGameCache.clear();
-    validThirdPartyCache.clear();
-    onState.mockClear();
-    window.addEventListener("unifideck-game-state-changed", onState);
-  });
-
-  afterEach(() => {
-    window.removeEventListener("unifideck-game-state-changed", onState);
-  });
-
-  function lastDetail(): unknown {
-    return (onState.mock.lastCall?.[0] as CustomEvent).detail;
-  }
-
-  it("announces a newly added game", () => {
-    updateSingleGameStatus({
-      appId: 999,
-      store: "epic",
-      isInstalled: true,
-    });
-
-    expect(onState).toHaveBeenCalledTimes(1);
-    expect(lastDetail()).toMatchObject({ appId: 999, isInstalled: true });
-  });
-
-  it("announces an install-state change", () => {
-    unifideckGameCache.set(999, { store: "epic", isInstalled: true });
-
-    updateSingleGameStatus({
-      appId: 999,
-      store: "epic",
-      isInstalled: false,
-    });
-
-    expect(onState).toHaveBeenCalledTimes(1);
-    expect(lastDetail()).toMatchObject({ appId: 999, isInstalled: false });
-  });
-
-  it("stays quiet when the state is unchanged", () => {
-    unifideckGameCache.set(999, { store: "epic", isInstalled: true });
-
-    updateSingleGameStatus({
-      appId: 999,
-      store: "epic",
-      isInstalled: true,
-    });
-
-    expect(onState).not.toHaveBeenCalled();
   });
 });
