@@ -1069,7 +1069,9 @@
   "collectionSettings": {
     "title": "КОЛЕКЦІЇ STEAM",
     "enabled": "Колекції увімкнено",
-    "disabled": "Колекції вимкнено"
+    "disabled": "Колекції вимкнено",
+    "groupDuplicates": "Групувати дублікати",
+    "groupDuplicatesDescription": "Об'єднує копії гри з різних магазинів в один значок на вкладках «Усі ігри», «Чудово на Deck» і «Встановлені». Типово вимкнено — копія з кожного магазину відображається окремо."
   },
   "storeOwnership": {
     "settingsTitle": "МАГАЗИН STEAM",
@@ -1118,5 +1120,8 @@
     "errorUsernameRequired": "Будь ласка, введіть ім'я користувача",
     "errorPasswordRequired": "Будь ласка, введіть пароль",
     "errorConnection": "Не вдалося підключитися до сервера GameVault"
+  },
+  "gameStoreSwitcher": {
+    "defaultEdition": "Стандартне видання"
   }
 }

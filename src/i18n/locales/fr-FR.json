@@ -1069,7 +1069,9 @@
   "collectionSettings": {
     "title": "COLLECTIONS STEAM",
     "enabled": "Collections activées",
-    "disabled": "Collections désactivées"
+    "disabled": "Collections désactivées",
+    "groupDuplicates": "Regrouper les doublons",
+    "groupDuplicatesDescription": "Fusionne les copies d'un titre provenant de différentes boutiques en une seule vignette dans Tous les jeux, Idéal sur Deck et Installés. Désactivé par défaut — la copie de chaque boutique s'affiche séparément."
   },
   "storeOwnership": {
     "settingsTitle": "BOUTIQUE STEAM",
@@ -1118,5 +1120,8 @@
     "errorUsernameRequired": "Veuillez entrer votre nom d'utilisateur",
     "errorPasswordRequired": "Veuillez entrer votre mot de passe",
     "errorConnection": "Échec de la connexion au serveur GameVault"
+  },
+  "gameStoreSwitcher": {
+    "defaultEdition": "Édition standard"
   }
 }

@@ -1069,7 +1069,9 @@
   "collectionSettings": {
     "title": "KOLEKCJE STEAM",
     "enabled": "Kolekcje włączone",
-    "disabled": "Kolekcje wyłączone"
+    "disabled": "Kolekcje wyłączone",
+    "groupDuplicates": "Grupuj duplikaty",
+    "groupDuplicatesDescription": "Łączy kopie tytułu z różnych sklepów w jeden kafelek w zakładkach Wszystkie gry, Świetne na Decka i Zainstalowane. Domyślnie wyłączone — kopia z każdego sklepu jest wyświetlana osobno."
   },
   "storeOwnership": {
     "settingsTitle": "SKLEP STEAM",
@@ -1118,5 +1120,8 @@
     "errorUsernameRequired": "Podaj swoją nazwę użytkownika",
     "errorPasswordRequired": "Podaj swoje hasło",
     "errorConnection": "Nie udało się połączyć z serwerem GameVault"
+  },
+  "gameStoreSwitcher": {
+    "defaultEdition": "Edycja standardowa"
   }
 }

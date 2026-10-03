@@ -1069,7 +1069,9 @@
   "collectionSettings": {
     "title": "STEAM コレクション",
     "enabled": "コレクションが有効",
-    "disabled": "コレクションが無効"
+    "disabled": "コレクションが無効",
+    "groupDuplicates": "重複をグループ化",
+    "groupDuplicatesDescription": "異なるストアの同じタイトルのコピーを、すべてのゲーム、Deckに最適、インストール済みの各タブで1つのタイルにまとめます。デフォルトではオフです。各ストアのコピーは個別に表示されます。"
   },
   "storeOwnership": {
     "settingsTitle": "STEAM ストア",
@@ -1118,5 +1120,8 @@
     "errorUsernameRequired": "ユーザー名を入力してください",
     "errorPasswordRequired": "パスワードを入力してください",
     "errorConnection": "GameVaultサーバーへの接続に失敗しました"
+  },
+  "gameStoreSwitcher": {
+    "defaultEdition": "スタンダードエディション"
   }
 }

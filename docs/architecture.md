@@ -82,6 +82,7 @@ Infrastructure primitives. No store or service knowledge.
 | `paths.py`                      | Canonical path resolution                 |
 | `store_urls.py`                 | Per-store storefront/search URL builders  |
 | `cross_source_dedupe.py`        | Drops a title owned on two stores at once |
+| `game_grouping.py`              | Display-only: stamps `dedupe_group_id`/`edition_label` for the All Games grid's multi-store card grouping — never removes a shortcut |
 | `safe_delete.py`                | Guarded delete used by every sweep        |
 | `cleanup_sweeps.py`             | The blocking sweeps behind "delete all data" |
 | `marker_sweep.py`               | Install-dir ownership via `.unifideck*` markers |

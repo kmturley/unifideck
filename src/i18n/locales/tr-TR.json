@@ -1069,7 +1069,9 @@
   "collectionSettings": {
     "title": "STEAM KOLEKSİYONLARI",
     "enabled": "Koleksiyonlar etkin",
-    "disabled": "Koleksiyonlar devre dışı"
+    "disabled": "Koleksiyonlar devre dışı",
+    "groupDuplicates": "Yinelenenleri grupla",
+    "groupDuplicatesDescription": "Farklı mağazalardaki aynı oyunun kopyalarını Tüm Oyunlar, Deck'te Harika ve Yüklü sekmelerinde tek bir kutuda birleştirir. Varsayılan olarak kapalıdır — her mağazanın kopyası ayrı ayrı gösterilir."
   },
   "storeOwnership": {
     "settingsTitle": "STEAM MAĞAZASI",
@@ -1118,5 +1120,8 @@
     "errorUsernameRequired": "Lütfen kullanıcı adınızı girin",
     "errorPasswordRequired": "Lütfen şifrenizi girin",
     "errorConnection": "GameVault sunucusuna bağlanılamadı"
+  },
+  "gameStoreSwitcher": {
+    "defaultEdition": "Standart Sürüm"
   }
 }

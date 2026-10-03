@@ -16,6 +16,7 @@ import {
   setStoreCountSink,
   type TabFilter,
 } from "../library-filters";
+import { GROUP_DUPLICATES_EVENT } from "../group-duplicates-setting";
 import { compatTabTitleKey } from "../device-type";
 import type { SteamAppOverview } from "../../types/steam";
 
@@ -487,6 +488,15 @@ class TabManager {
 
   rebuildTabs(): void {
     this.tabs = getUnifideckTabs().map((tab) => new UnifideckTabContainer(tab));
+    // Eagerly build every fresh container's collection instead of leaving
+    // it to the lazy `getActualTab()` call. `buildCollection()` otherwise
+    // only runs when Steam actually renders that tab, so a brand-new
+    // container's `visibleApps` (and therefore its count badge) stayed
+    // empty until the user left and re-entered the library — the "Group
+    // duplicates" toggle looked like it needed a manual re-visit of the
+    // library to take effect on tab counts, even though the underlying
+    // filters (`hideAsDuplicate`) already read the setting live.
+    for (const tab of this.tabs) tab.buildCollection();
     this.notifyListeners();
   }
 }
@@ -499,5 +509,14 @@ export const tabManager = new TabManager();
 // future ``loadUnifideckCache`` invocation.
 setStoreCountSink((counts) => {
   tabManager.setStoreCounts(counts);
+  if (tabManager.isInitialized()) tabManager.rebuildTabs();
+});
+
+// Force every tab's ``buildCollection`` to re-run when the "Group
+// duplicates" setting flips, so grouping takes effect immediately
+// instead of waiting for the next unrelated re-render. The filter
+// functions themselves read the setting live either way (no caching),
+// so this is a live-refresh nicety, not a correctness requirement.
+window.addEventListener(GROUP_DUPLICATES_EVENT, () => {
   if (tabManager.isInitialized()) tabManager.rebuildTabs();
 });

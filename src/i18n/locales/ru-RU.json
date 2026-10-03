@@ -1069,7 +1069,9 @@
   "collectionSettings": {
     "title": "КОЛЛЕКЦИИ STEAM",
     "enabled": "Коллекции включены",
-    "disabled": "Коллекции выключены"
+    "disabled": "Коллекции выключены",
+    "groupDuplicates": "Группировать дубликаты",
+    "groupDuplicatesDescription": "Объединяет копии игры из разных магазинов в один значок на вкладках «Все игры», «Отлично на Deck» и «Установленные». По умолчанию отключено — копия из каждого магазина отображается отдельно."
   },
   "storeOwnership": {
     "settingsTitle": "МАГАЗИН STEAM",
@@ -1118,5 +1120,8 @@
     "errorUsernameRequired": "Пожалуйста, введите имя пользователя",
     "errorPasswordRequired": "Пожалуйста, введите пароль",
     "errorConnection": "Не удалось подключиться к серверу GameVault"
+  },
+  "gameStoreSwitcher": {
+    "defaultEdition": "Стандартное издание"
   }
 }

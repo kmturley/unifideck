@@ -648,7 +648,9 @@
   "collectionSettings": {
     "title": "STEAM COLLECTIONS",
     "enabled": "Collections enabled",
-    "disabled": "Collections disabled"
+    "disabled": "Collections disabled",
+    "groupDuplicates": "Group duplicates",
+    "groupDuplicatesDescription": "Collapse multiple copies from different stores into one Library tile. Provides a dropdown on the title detail page to toggle between duplicates."
   },
   "storeOwnership": {
     "settingsTitle": "STEAM STORE",
@@ -1118,5 +1120,8 @@
     "errorUsernameRequired": "Please enter your username",
     "errorPasswordRequired": "Please enter your password",
     "errorConnection": "Failed to connect to GameVault server"
+  },
+  "gameStoreSwitcher": {
+    "defaultEdition": "Standard Edition"
   }
 }
