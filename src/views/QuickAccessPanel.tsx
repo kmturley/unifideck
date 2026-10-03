@@ -62,6 +62,7 @@ import {
   PluginUpdater,
 } from "../components/settings";
 import { DownloadsTab } from "../components/downloads";
+import { QamTabLabel } from "./QamTabLabel";
 
 /** The two Quick-Access tabs. */
 type ActiveTab = "settings" | "downloads";
@@ -106,6 +107,7 @@ const TABS_CSS = ((c) => {
       justify-content: center; font-size: 0.9em;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
+    ${s} .${c.TabTitle} { flex: 1; min-width: 0; overflow: hidden; }
     ${s} .${c.TabContentsScroll} { padding: 58px 0 40px !important; }
   `;
 })(tabClasses);
@@ -161,6 +163,9 @@ export const QuickAccessPanel: FC = () => {
   // section on the Settings tab, which already reports it.
   const downloadsLabel = t("tabs.downloads");
 
+  // Titles are components (a focus-driven marquee), so Steam must render
+  // them as-is: without `bTitleAlreadyLocalized` it runs the title through
+  // its string localizer, which expects a string.
   return (
     <div
       ref={rootRef}
@@ -174,7 +179,8 @@ export const QuickAccessPanel: FC = () => {
         tabs={[
           {
             id: "settings",
-            title: t("tabs.settings"),
+            title: <QamTabLabel text={t("tabs.settings")} />,
+            bTitleAlreadyLocalized: true,
             content: (
               <>
                 <StoreConnections />
@@ -191,7 +197,8 @@ export const QuickAccessPanel: FC = () => {
           },
           {
             id: "downloads",
-            title: downloadsLabel,
+            title: <QamTabLabel text={downloadsLabel} />,
+            bTitleAlreadyLocalized: true,
             content: <DownloadsTab />,
           },
         ]}

@@ -141,10 +141,22 @@ const StoreRow: FC<{ storeId: StoreId; displayName: string }> = ({
   );
 };
 
+/**
+ * Listed after the storefronts. GameVault is a self-hosted server rather
+ * than a store, so it goes last instead of in alphabetical order.
+ */
+const LISTED_LAST: readonly StoreId[] = ["gamevault"];
+
 export const StoreConnections: FC = () => {
   const { t } = useTranslation();
   const { stores, loading } = useStores();
   if (loading) return null;
+  // Stable sort: the backend's order holds within each group.
+  const ordered = [...stores].sort(
+    (a, b) =>
+      Number(LISTED_LAST.includes(a.name)) -
+      Number(LISTED_LAST.includes(b.name)),
+  );
   return (
     <PanelSection title={t("storeConnections.title")}>
       {/* Rendered once for the whole section, not per row. */}
@@ -159,7 +171,7 @@ export const StoreConnections: FC = () => {
         flow-children="grid"
         style={{ display: "flex", flexDirection: "column", gap: 2 }}
       >
-        {stores.map((s) => (
+        {ordered.map((s) => (
           <StoreRow
             key={s.name}
             storeId={s.name}
