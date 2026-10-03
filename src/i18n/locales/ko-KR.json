@@ -1067,7 +1067,7 @@
     "errorUnavailable": "이 게임에서는 도전 과제를 사용할 수 없습니다."
   },
   "collectionSettings": {
-    "title": "STEAM 컬렉션",
+    "title": "라이브러리 게임 항목",
     "enabled": "컬렉션 활성화됨",
     "disabled": "컬렉션 비활성화됨",
     "groupDuplicates": "중복 항목 그룹화"

@@ -1067,7 +1067,7 @@
     "errorUnavailable": "Prestaties zijn niet beschikbaar voor dit spel."
   },
   "collectionSettings": {
-    "title": "STEAM-COLLECTIES",
+    "title": "GAME-ITEMS",
     "enabled": "Collecties ingeschakeld",
     "disabled": "Collecties uitgeschakeld",
     "groupDuplicates": "Duplicaten groeperen"

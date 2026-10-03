@@ -1067,7 +1067,7 @@
     "errorUnavailable": "このゲームでは実績を利用できません。"
   },
   "collectionSettings": {
-    "title": "STEAM コレクション",
+    "title": "ライブラリのゲーム項目",
     "enabled": "コレクションが有効",
     "disabled": "コレクションが無効",
     "groupDuplicates": "重複をグループ化"

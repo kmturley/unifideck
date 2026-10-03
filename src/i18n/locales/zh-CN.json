@@ -1067,7 +1067,7 @@
     "errorUnavailable": "此游戏不支持成就。"
   },
   "collectionSettings": {
-    "title": "STEAM 收藏夹",
+    "title": "游戏库条目",
     "enabled": "收藏夹已启用",
     "disabled": "收藏夹已禁用",
     "groupDuplicates": "合并重复项"

@@ -1067,7 +1067,7 @@
     "errorUnavailable": "Für dieses Spiel sind keine Erfolge verfügbar."
   },
   "collectionSettings": {
-    "title": "STEAM-SAMMLUNGEN",
+    "title": "SPIELEINTRÄGE",
     "enabled": "Sammlungen aktiviert",
     "disabled": "Sammlungen deaktiviert",
     "groupDuplicates": "Duplikate gruppieren"
