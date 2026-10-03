@@ -157,24 +157,33 @@ class ButlerdConnection:
 
     async def _dispatch(self, msg: dict[str, Any]) -> None:
         if "id" in msg and ("result" in msg or "error" in msg):
-            fut = self._pending.get(msg["id"])
-            if fut is not None and not fut.done():
-                if "error" in msg:
-                    fut.set_exception(ButlerdError.from_payload(msg["error"]))
-                else:
-                    fut.set_result(msg.get("result") or {})
+            self._resolve(msg)
             return
         method = str(msg.get("method") or "")
         params = msg.get("params") or {}
         if "id" in msg:
             await self._answer(msg["id"], method, params)
-        elif self._on_notification is not None:
-            try:
-                self._on_notification(method, params)
-            except Exception:
-                # A bug in a progress hook must not end the transport, and
-                # with it every install in flight on this connection.
-                logger.exception("[butlerd] notification handler failed on %s", method)
+        else:
+            self._notify(method, params)
+
+    def _resolve(self, msg: dict[str, Any]) -> None:
+        fut = self._pending.get(msg["id"])
+        if fut is None or fut.done():
+            return
+        if "error" in msg:
+            fut.set_exception(ButlerdError.from_payload(msg["error"]))
+        else:
+            fut.set_result(msg.get("result") or {})
+
+    def _notify(self, method: str, params: dict[str, Any]) -> None:
+        if self._on_notification is None:
+            return
+        try:
+            self._on_notification(method, params)
+        except Exception:
+            # A bug in a progress hook must not end the transport, and
+            # with it every install in flight on this connection.
+            logger.exception("[butlerd] notification handler failed on %s", method)
 
     async def _answer(self, req_id: Any, method: str, params: dict[str, Any]) -> None:
         answer = None
