@@ -181,15 +181,30 @@ function applyFacet(ov: EnrichableOverview, facet: FacetRecord): void {
   setIds(ov.m_setStoreTags, facet.store_tag);
 }
 
+// Steam's two at-rest display states: ReadyToInstall, ReadyToLaunch.
+const RESTING_DISPLAY_STATUS = new Set([9, 11]);
+
 /** Shape Steam itself uses: installed → display_status 11 /
  *  status_percentage 100; not installed → display_status 9 /
  *  status_percentage absent. `installed` drives the getter;
- *  `display_status` drives the renderer's DOM class. */
+ *  `display_status` drives the renderer's DOM class.
+ *
+ *  Only an at-rest `display_status` is rewritten. The same field
+ *  carries Steam's live states (1 launching, 4 running, 36
+ *  terminating), which our Resume/Stop button (`useAppRunning`),
+ *  the launchers' double-launch guard (`isShortcutAppRunning`) and
+ *  Steam's own `ScopeRunningApps` check all read. Steam reads it
+ *  right after `m_mapApps.set`, so after our set patch has run.
+ *  Steam writes 11 back itself when the game exits. */
 function applyPerClientDataShape(
   entry: EnrichablePerClientData,
   isInstalled: boolean,
 ): void {
   entry.installed = isInstalled;
+  const status = entry.display_status;
+  if (typeof status === "number" && !RESTING_DISPLAY_STATUS.has(status)) {
+    return;
+  }
   if (isInstalled) {
     entry.display_status = 11;
     entry.status_percentage = 100;
@@ -234,25 +249,6 @@ function applyInstalledState(
     }
     applyPerClientDataShape(mostAvailEntry, isInstalled);
   }
-
-  // Nudge MobX/React reactivity.
-  try {
-    (ov as unknown as { TriggerChange?: () => void }).TriggerChange?.();
-  } catch {
-    /* never break Steam's own write path */
-  }
-}
-
-/** Immediately correct the install-state field for one shortcut's live
- *  overview, without waiting for the next full enrichment sweep. Safe
- *  to call even if the overview isn't currently in `m_mapApps` (no-op). */
-export function enrichInstalledState(
-  appid: number,
-  isInstalled: boolean,
-): void {
-  const ov = getAppStore()?.m_mapApps?.get(appid);
-  if (!ov || ov.app_type !== NON_STEAM_APP_TYPE) return;
-  applyInstalledState(ov, isInstalled);
 }
 
 /** Apply EVERYTHING we know for one shortcut overview (facet + cached
@@ -276,11 +272,15 @@ function applyEnrichment(ov: EnrichableOverview): void {
   }
 }
 
-/** Re-apply enrichment to every shortcut overview currently in the map. */
+/** Re-apply enrichment to every shortcut overview currently in the map.
+ *  A game with no facet yet still needs its install state, so being in
+ *  `unifideckGameCache` is enough; shortcuts that are neither (the
+ *  user's own) are left alone. Runs on `unifideck-game-state-changed`,
+ *  which is how an install/uninstall reaches the live overview. */
 export function enrichAllShortcuts(): void {
   let count = 0;
   forEachShortcutOverview((ov) => {
-    if (getFacet(ov.appid)) {
+    if (getFacet(ov.appid) || unifideckGameCache.has(ov.appid)) {
       applyEnrichment(ov);
       count++;
     }

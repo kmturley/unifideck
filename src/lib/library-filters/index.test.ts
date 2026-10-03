@@ -23,9 +23,6 @@ vi.mock("../../api/event-bus-client", () => ({
     subscribe: vi.fn(),
   },
 }));
-vi.mock("../steam-bridge/overview-enrichment", () => ({
-  enrichInstalledState: vi.fn(),
-}));
 
 import { call } from "@decky/api";
 import {
@@ -36,7 +33,6 @@ import {
   isUnifideckCacheLoaded,
   updateSingleGameStatus,
 } from "./index";
-import { enrichInstalledState } from "../steam-bridge/overview-enrichment";
 import type { SteamAppOverview } from "../../types/steam";
 
 const NON_STEAM_APP_TYPE = 1073741824;
@@ -178,24 +174,38 @@ describe("loadUnifideckCache fail-open (UD-043 / UD-008)", () => {
   });
 });
 
+// Overview enrichment listens for this event and re-sweeps, which is
+// how an install/uninstall reaches Steam's live AppOverview.
 describe("updateSingleGameStatus install-state propagation", () => {
+  const onState = vi.fn();
+
   beforeEach(() => {
     unifideckGameCache.clear();
     validThirdPartyCache.clear();
-    vi.mocked(enrichInstalledState).mockClear();
+    onState.mockClear();
+    window.addEventListener("unifideck-game-state-changed", onState);
   });
 
-  it("calls enrichInstalledState when a new game is added", () => {
+  afterEach(() => {
+    window.removeEventListener("unifideck-game-state-changed", onState);
+  });
+
+  function lastDetail(): unknown {
+    return (onState.mock.lastCall?.[0] as CustomEvent).detail;
+  }
+
+  it("announces a newly added game", () => {
     updateSingleGameStatus({
       appId: 999,
       store: "epic",
       isInstalled: true,
     });
 
-    expect(enrichInstalledState).toHaveBeenCalledWith(999, true);
+    expect(onState).toHaveBeenCalledTimes(1);
+    expect(lastDetail()).toMatchObject({ appId: 999, isInstalled: true });
   });
 
-  it("calls enrichInstalledState when install state changes", () => {
+  it("announces an install-state change", () => {
     unifideckGameCache.set(999, { store: "epic", isInstalled: true });
 
     updateSingleGameStatus({
@@ -204,10 +214,11 @@ describe("updateSingleGameStatus install-state propagation", () => {
       isInstalled: false,
     });
 
-    expect(enrichInstalledState).toHaveBeenCalledWith(999, false);
+    expect(onState).toHaveBeenCalledTimes(1);
+    expect(lastDetail()).toMatchObject({ appId: 999, isInstalled: false });
   });
 
-  it("does NOT call enrichInstalledState when state is unchanged", () => {
+  it("stays quiet when the state is unchanged", () => {
     unifideckGameCache.set(999, { store: "epic", isInstalled: true });
 
     updateSingleGameStatus({
@@ -216,6 +227,6 @@ describe("updateSingleGameStatus install-state propagation", () => {
       isInstalled: true,
     });
 
-    expect(enrichInstalledState).not.toHaveBeenCalled();
+    expect(onState).not.toHaveBeenCalled();
   });
 });

@@ -23,6 +23,9 @@ vi.mock("../../api/useRPC", () => ({
       ? (raw as Record<string, unknown>).data
       : raw,
 }));
+vi.mock("../../api/event-bus-client", () => ({
+  EventBusClient: { subscribe: vi.fn(() => () => {}) },
+}));
 vi.mock("../library-filters", () => ({
   unifideckGameCache: new Map(),
 }));
@@ -30,7 +33,7 @@ vi.mock("../library-filters", () => ({
 import { call } from "@decky/api";
 import { unifideckGameCache } from "../library-filters";
 import { loadFacets, __resetFacetsForTest } from "../library-facets";
-import { enrichAllShortcuts, enrichInstalledState } from "./overview-enrichment";
+import { enrichAllShortcuts, startOverviewEnrichment } from "./overview-enrichment";
 
 const mockCall = call as unknown as ReturnType<typeof vi.fn>;
 
@@ -159,11 +162,19 @@ describe("install-state enrichment", () => {
     unifideckGameCache.clear();
   });
 
-  it("writes installed shape: display_status 11, status_percentage 100", () => {
+  /** A Unifideck game we know the install state of but have no facet
+   *  for yet; enrichment must still write its install state. */
+  function cachedShortcut(isInstalled: boolean): TestOverview {
+    unifideckGameCache.set(APPID, { store: "epic", isInstalled });
     const ov = makeOverview(APPID, 0);
     installAppStore([ov]);
+    return ov;
+  }
 
-    enrichInstalledState(APPID, true);
+  it("writes installed shape: display_status 11, status_percentage 100", () => {
+    const ov = cachedShortcut(true);
+
+    enrichAllShortcuts();
 
     expect(ov.per_client_data).toHaveLength(1);
     expect(ov.per_client_data![0]).toMatchObject({
@@ -175,7 +186,7 @@ describe("install-state enrichment", () => {
   });
 
   it("writes not-installed shape: display_status 9, status_percentage absent", () => {
-    const ov = makeOverview(APPID, 0);
+    const ov = cachedShortcut(false);
     ov.per_client_data = [
       {
         clientid: "0",
@@ -184,59 +195,64 @@ describe("install-state enrichment", () => {
         status_percentage: 100,
       },
     ];
-    installAppStore([ov]);
 
-    enrichInstalledState(APPID, false);
+    enrichAllShortcuts();
 
-    expect(ov.per_client_data![0]).toMatchObject({
+    expect(ov.per_client_data[0]).toMatchObject({
       clientid: "0",
       installed: false,
       display_status: 9,
     });
-    expect("status_percentage" in ov.per_client_data![0]).toBe(false);
-  });
-
-  it("creates per_client_data array when absent", () => {
-    const ov = makeOverview(APPID, 0);
-    installAppStore([ov]);
-
-    enrichInstalledState(APPID, true);
-
-    expect(Array.isArray(ov.per_client_data)).toBe(true);
+    expect("status_percentage" in ov.per_client_data[0]).toBe(false);
   });
 
   it("is a no-op for non-shortcut app types", () => {
-    const ov = makeOverview(APPID, 0);
+    const ov = cachedShortcut(true);
     ov.app_type = 1;
-    installAppStore([ov]);
 
-    enrichInstalledState(APPID, true);
+    enrichAllShortcuts();
 
     expect(ov.per_client_data).toBeUndefined();
   });
 
-  it("is a no-op when overview is absent from appStore", () => {
-    installAppStore([]);
-    expect(() => enrichInstalledState(APPID, true)).not.toThrow();
-  });
-
-  it("enrichAllShortcuts writes install state from cache entry", async () => {
-    mockCall.mockResolvedValue({ success: true, data: { [APPID]: RECORD } });
-    await loadFacets(true);
-    unifideckGameCache.set(APPID, { store: "epic", isInstalled: true });
-    const ov = makeOverview(APPID, 0);
-    installAppStore([ov]);
+  it("leaves a running game's display_status alone", () => {
+    // 4 = Running. Overwriting it with 11 hid our Resume/Stop pair and
+    // let a second Play click call RunGame again.
+    const ov = cachedShortcut(true);
+    ov.per_client_data = [{ clientid: "0", installed: true, display_status: 4 }];
 
     enrichAllShortcuts();
 
-    expect(ov.per_client_data![0]).toMatchObject({
+    expect(ov.per_client_data[0]).toMatchObject({
       installed: true,
-      display_status: 11,
-      status_percentage: 100,
+      display_status: 4,
     });
   });
 
-  it("enrichAllShortcuts skips install-state write when cache entry absent", async () => {
+  it("leaves a launching game's display_status alone", () => {
+    const ov = cachedShortcut(true);
+    ov.per_client_data = [{ clientid: "0", installed: true, display_status: 1 }];
+
+    enrichAllShortcuts();
+
+    expect(ov.per_client_data[0].display_status).toBe(1);
+  });
+
+  it("writes facet fields and install state together", async () => {
+    mockCall.mockResolvedValue({ success: true, data: { [APPID]: RECORD } });
+    await loadFacets(true);
+    const ov = cachedShortcut(true);
+
+    enrichAllShortcuts();
+
+    expect(ov.metacritic_score).toBe(81);
+    expect(ov.per_client_data![0]).toMatchObject({
+      installed: true,
+      display_status: 11,
+    });
+  });
+
+  it("skips the install-state write when there is no cache entry", async () => {
     mockCall.mockResolvedValue({ success: true, data: { [APPID]: RECORD } });
     await loadFacets(true);
     const ov = makeOverview(APPID, 0);
@@ -246,5 +262,36 @@ describe("install-state enrichment", () => {
 
     expect(ov.metacritic_score).toBe(81);
     expect(ov.per_client_data).toBeUndefined();
+  });
+
+  it("the m_mapApps.set patch keeps Steam's live status", async () => {
+    // Steam's overview loop runs InitFromProto → m_mapApps.set → reads
+    // display_status for ScopeRunningApps, so our patch runs in between.
+    mockCall.mockResolvedValue({ success: true, data: {} });
+    cachedShortcut(true);
+    const map = (
+      window as unknown as {
+        appStore: { m_mapApps: Map<number, TestOverview> & Record<string, unknown> };
+      }
+    ).appStore.m_mapApps;
+    const stop = startOverviewEnrichment();
+    await vi.waitFor(() => expect(map.__unifideckOriginalSet).toBeDefined());
+
+    const launching = makeOverview(APPID, 0);
+    launching.per_client_data = [{ clientid: "0", installed: true, display_status: 1 }];
+    map.set(APPID, launching);
+    expect(launching.per_client_data[0].display_status).toBe(1);
+
+    // The patch is live: an at-rest status is still corrected.
+    unifideckGameCache.set(APPID, { store: "epic", isInstalled: false });
+    const idle = makeOverview(APPID, 0);
+    idle.per_client_data = [{ clientid: "0", installed: true, display_status: 11 }];
+    map.set(APPID, idle);
+    expect(idle.per_client_data[0]).toMatchObject({
+      installed: false,
+      display_status: 9,
+    });
+
+    stop();
   });
 });
