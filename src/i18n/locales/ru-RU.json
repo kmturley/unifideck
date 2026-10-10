@@ -151,7 +151,7 @@
     "uploadSkippedBody": "Пока нет локальных сохранений для загрузки для {{game}}."
   },
   "storeConnections": {
-    "title": "ПОДКЛЮЧЕНИЕ МАГАЗИНОВ",
+    "title": "МАГАЗИНЫ",
     "epicGames": "Epic Games",
     "gog": "GOG",
     "amazonGames": "Amazon Games",
@@ -164,7 +164,6 @@
     "storefrontOpening": "Открытие магазина {{store}}...",
     "storefrontFailed": "Не удалось открыть магазин {{store}}",
     "allStores": "Все магазины",
-    "notConnected": "Не подключено",
     "notSynced": "Ещё не синхронизировано",
     "gameCount": "{{count}} игра",
     "gameCount_other": "{{count}} игр",
